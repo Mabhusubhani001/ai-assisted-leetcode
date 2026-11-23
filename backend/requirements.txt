@@ -1,0 +1,26 @@
+# ==============================================================================
+# FastAPI & Concurrency Engine Dependencies
+# ==============================================================================
+
+# Core Framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+
+# Settings & Data Validation (Pydantic v2)
+pydantic>=2.8.0
+pydantic-settings>=2.4.0
+
+# Database & ORM (Async SQLAlchemy 2.0 + asyncpg driver)
+sqlalchemy[asyncio]>=2.0.30
+asyncpg>=0.29.0
+greenlet>=3.0.3
+alembic>=1.13.0
+
+# In-Memory Cache & Token Guardrails
+redis>=5.0.0
+
+# HTTP Client for external services & Judge0 dispatch
+httpx>=0.27.0
+
+# Environment Management
+python-dotenv>=1.0.1

@@ -36,6 +36,29 @@ services:
     networks:
       - leetcode_network
 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: leetcode_backend
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-leetcode_db}
+      REDIS_URL: redis://redis:6379/0
+      QUESTION_TOKEN_LIMIT: ${QUESTION_TOKEN_LIMIT:-2000}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - leetcode_network
+
 volumes:
   postgres_data:
     name: leetcode_postgres_data
