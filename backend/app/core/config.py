@@ -20,6 +20,13 @@ class Settings(BaseSettings):
     # Guardrails
     QUESTION_TOKEN_LIMIT: int = 2000
 
+    # Clerk Authentication & Webhook Sync
+    CLERK_SECRET_KEY: str = ""
+    CLERK_PUBLISHABLE_KEY: str = ""
+    CLERK_WEBHOOK_SECRET: str = "whsec_local_test_key"
+    CLERK_JWKS_URL: str = ""
+    CLERK_PEM_PUBLIC_KEY: str = ""
+
     model_config = SettingsConfigDict(
         env_file=(".env", "../.env"),
         extra="ignore"
