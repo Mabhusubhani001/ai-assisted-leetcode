@@ -38,6 +38,7 @@ interface EditorPaneProps {
   language: string;
   onCodeChange: (code: string) => void;
   onLanguageChange: (lang: string) => void;
+  onSubmissionSuccess?: (result: SubmissionResponse) => void;
 }
 
 export function EditorPane({
@@ -47,6 +48,7 @@ export function EditorPane({
   language,
   onCodeChange,
   onLanguageChange,
+  onSubmissionSuccess,
 }: EditorPaneProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionResult, setSubmissionResult] = useState<SubmissionResponse | null>(null);
@@ -80,6 +82,7 @@ export function EditorPane({
 
       const result: SubmissionResponse = await res.json();
       setSubmissionResult(result);
+      onSubmissionSuccess?.(result);
     } catch (err: any) {
       setSubmissionError(err.message || "Unable to reach submission runner");
     } finally {

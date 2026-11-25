@@ -39,3 +39,14 @@ class SubmissionResponse(BaseModel):
     created_at: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+class QuestionProgress(BaseModel):
+    status: Literal["SOLVED", "ATTEMPTED"]
+    attempts: int
+    last_submitted_at: datetime.datetime
+
+class StudentCatalogSummary(BaseModel):
+    total_solved: int
+    total_attempted: int
+    progress: dict[str, QuestionProgress]
+

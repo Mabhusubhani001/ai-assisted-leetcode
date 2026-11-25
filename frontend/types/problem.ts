@@ -59,3 +59,16 @@ export interface SubmissionResponse {
   } | null;
   created_at: string;
 }
+
+export interface QuestionProgress {
+  status: "SOLVED" | "ATTEMPTED";
+  attempts: number;
+  last_submitted_at: string;
+}
+
+export interface StudentCatalogSummary {
+  total_solved: number;
+  total_attempted: number;
+  progress: Record<string, QuestionProgress>;
+}
+

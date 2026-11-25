@@ -18,6 +18,7 @@ export function PracticeWorkspace({ problem }: PracticeWorkspaceProps) {
       `# Explain your algorithmic approach in the AI Coach pane to generate and load starter code.`
   );
   const [tokensUsed, setTokensUsed] = useState(0);
+  const [submissionTrigger, setSubmissionTrigger] = useState(0);
 
   // Panel widths in percentage (28% Problem | 44% Code Editor | 28% AI Coach)
   const [leftWidth, setLeftWidth] = useState(28);
@@ -83,7 +84,11 @@ export function PracticeWorkspace({ problem }: PracticeWorkspaceProps) {
         style={{ width: `${leftWidth}%` }}
         className="flex flex-col min-w-[260px] self-stretch min-h-0 rounded-lg overflow-hidden border border-[#232738] bg-[#0d1117] shadow-sm"
       >
-        <ProblemPane problem={problem} />
+        <ProblemPane
+          problem={problem}
+          submissionTrigger={submissionTrigger}
+          onRestoreCode={setCode}
+        />
       </div>
 
       {/* Resize Gutter 1 */}
@@ -111,6 +116,7 @@ export function PracticeWorkspace({ problem }: PracticeWorkspaceProps) {
           language={language}
           onCodeChange={setCode}
           onLanguageChange={handleLanguageChange}
+          onSubmissionSuccess={() => setSubmissionTrigger((prev) => prev + 1)}
         />
       </div>
 

@@ -2,14 +2,19 @@ import uuid
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func, case
 
 from app.core.database import get_db
 from app.core.security import CurrentUser
 from app.models.question import Question
 from app.models.test_case import TestCase
 from app.models.submission import Submission
-from app.schemas.submission import SubmissionCreate, SubmissionResponse
+from app.schemas.submission import (
+    SubmissionCreate,
+    SubmissionResponse,
+    QuestionProgress,
+    StudentCatalogSummary,
+)
 from app.services.code_executor import CodeExecutorService
 
 router = APIRouter(prefix="/submissions", tags=["Code Execution & Submissions"])
@@ -91,6 +96,55 @@ async def submit_code(
     response_dto.failed_test_case_info = exec_result.failed_test_case_info
 
     return response_dto
+
+@router.get("/summary", response_model=StudentCatalogSummary)
+async def get_student_catalog_summary(
+    current_user: CurrentUser,
+    db: DbDep,
+):
+    """
+    Retrieve aggregated submission progress for the authenticated student across all problems.
+    Computes SOLVED vs ATTEMPTED status, total counts, and last submitted timestamp.
+    """
+    user_id = current_user.get("sub")
+
+    stmt = (
+        select(
+            Submission.question_id,
+            func.count(Submission.id).label("attempt_count"),
+            func.max(
+                case(
+                    (Submission.status == "ACCEPTED", 1),
+                    else_=0
+                )
+            ).label("is_solved"),
+            func.max(Submission.created_at).label("last_submitted_at"),
+        )
+        .where(Submission.user_id == user_id)
+        .group_by(Submission.question_id)
+    )
+    rows = (await db.execute(stmt)).all()
+
+    progress = {}
+    total_solved = 0
+    total_attempted = len(rows)
+
+    for row in rows:
+        q_id_str = str(row.question_id)
+        solved = bool(row.is_solved)
+        if solved:
+            total_solved += 1
+        progress[q_id_str] = QuestionProgress(
+            status="SOLVED" if solved else "ATTEMPTED",
+            attempts=row.attempt_count,
+            last_submitted_at=row.last_submitted_at,
+        )
+
+    return StudentCatalogSummary(
+        total_solved=total_solved,
+        total_attempted=total_attempted,
+        progress=progress,
+    )
 
 @router.get("/{submission_id}", response_model=SubmissionResponse)
 async def get_submission(
