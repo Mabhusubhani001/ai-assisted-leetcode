@@ -91,7 +91,11 @@ print(json.dumps(to_array(reversed_head)))
         else:
             driver = "import sys\nprint(sys.stdin.read().strip())"
 
-        return f"{source_code}\n\n{driver}"
+        preamble = (
+            "from typing import List, Dict, Tuple, Set, Optional, Any, Union\n"
+            "import sys, json, math, collections, heapq\n\n"
+        )
+        return f"{preamble}{source_code}\n\n{driver}"
 
     @classmethod
     async def execute_submission(

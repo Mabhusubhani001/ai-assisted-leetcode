@@ -5,8 +5,11 @@ from pydantic import BaseModel, ConfigDict, Field
 class ChatPromptRequest(BaseModel):
     """Payload sent by student to explain their algorithmic approach."""
     question_id: uuid.UUID
-    prompt: str = Field(min_length=5, max_length=4000, description="Student approach explanation")
+    prompt: str = Field(min_length=1, max_length=4000, description="Student approach explanation")
     language: str = Field(default="python", description="Target programming language for starter code")
+    custom_provider: str | None = Field(default=None, description="Optional BYOK provider (featherless, gemini, claude)")
+    custom_api_key: str | None = Field(default=None, description="Optional user-supplied API key")
+    custom_model: str | None = Field(default=None, description="Optional custom model override")
 
 class ChatEvaluationResponse(BaseModel):
     """Rich evaluation returned by the AI Coach."""
@@ -18,10 +21,15 @@ class ChatEvaluationResponse(BaseModel):
     space_complexity: str | None = None
     missing_requirements: list[str] = []
     starter_code: str | None = None
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    turn_tokens: int = 0
     tokens_consumed: int
     tokens_used: int
     token_limit: int = 2000
     is_locked: bool
+    provider_used: str = "gemini"
+    model_used: str = "gemini-3.5-flash-lite"
 
 class ChatResponse(BaseModel):
     """Historical chat log item."""

@@ -26,7 +26,20 @@ class CoachingResult(BaseModel):
     space_complexity: str | None = None
     missing_requirements: list[str] = []
     starter_code: str | None = None
-    tokens_consumed: int = 150
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    turn_tokens: int = 0
+    tokens_consumed: int = 0
+
+def count_tokens(text: str) -> int:
+    """
+    Approximates subword/BPE tokenization by counting words, numbers,
+    and individual punctuation characters (e.g. (), [], {}, ->, ;, *).
+    """
+    if not text:
+        return 0
+    tokens = re.findall(r"\w+|[^\w\s]", text)
+    return max(len(tokens), 1)
 
 class AICoachService:
     """
@@ -56,11 +69,16 @@ class AICoachService:
         """
         # 1. Guardrail: Prompt Injection Defense
         if cls.check_prompt_injection(prompt):
+            p_tok = count_tokens(prompt)
+            c_tok = 30
             return CoachingResult(
                 is_approved=False,
                 feedback="⚠️ **Security Alert:** Prompt injection attempt detected. You must explain your legitimate algorithmic approach and time/space complexity to unlock the editor.",
                 missing_requirements=["Legitimate algorithmic explanation"],
-                tokens_consumed=80,
+                prompt_tokens=p_tok,
+                completion_tokens=c_tok,
+                turn_tokens=p_tok + c_tok,
+                tokens_consumed=p_tok + c_tok,
             )
 
         lower = prompt.lower()
@@ -139,19 +157,118 @@ class AICoachService:
         # Retrieve language-specific starter code if approved
         starter_code = None
         if is_approved:
-            starter_code = question.starter_code.get(language) or question.starter_code.get("python")
+            # Generate contextual scaffolding reflecting the student's chosen data structure
+            if slug == "two-sum":
+                if language == "python":
+                    starter_code = (
+                        "class Solution:\n"
+                        "    def twoSum(self, nums: list[int], target: int) -> list[int]:\n"
+                        "        # 1. Initialize hash map to store value -> index\n"
+                        "        seen = {}\n"
+                        "        \n"
+                        "        # 2. Iterate through nums and check for complement (target - num)\n"
+                        "        # TODO: Implement iteration and complement lookup\n"
+                        "        \n"
+                        "        # 3. Return matching indices [seen[complement], current_index]\n"
+                        "        return []\n"
+                    )
+                elif language == "cpp":
+                    starter_code = (
+                        "#include <vector>\n"
+                        "#include <unordered_map>\n\n"
+                        "class Solution {\n"
+                        "public:\n"
+                        "    std::vector<int> twoSum(std::vector<int>& nums, int target) {\n"
+                        "        // 1. Initialize hash map to store value -> index\n"
+                        "        std::unordered_map<int, int> seen;\n"
+                        "        \n"
+                        "        // 2. Iterate and check complement (target - num)\n"
+                        "        // TODO: Implement lookup\n"
+                        "        \n"
+                        "        return {};\n"
+                        "    }\n"
+                        "};\n"
+                    )
+                elif language == "java":
+                    starter_code = (
+                        "import java.util.HashMap;\n"
+                        "import java.util.Map;\n\n"
+                        "class Solution {\n"
+                        "    public int[] twoSum(int[] nums, int target) {\n"
+                        "        // 1. Initialize hash map to store value -> index\n"
+                        "        Map<Integer, Integer> seen = new HashMap<>();\n"
+                        "        \n"
+                        "        // 2. Iterate and check complement\n"
+                        "        // TODO: Implement lookup\n"
+                        "        \n"
+                        "        return new int[]{};\n"
+                        "    }\n"
+                        "}\n"
+                    )
+                else:
+                    starter_code = (
+                        "/**\n"
+                        " * @param {number[]} nums\n"
+                        " * @param {number} target\n"
+                        " * @return {number[]}\n"
+                        " */\n"
+                        "var twoSum = function(nums, target) {\n"
+                        "    // 1. Initialize hash map to store value -> index\n"
+                        "    const seen = new Map();\n"
+                        "    \n"
+                        "    // 2. Iterate and check complement\n"
+                        "    // TODO: Implement lookup\n"
+                        "    \n"
+                        "    return [];\n"
+                        "};\n"
+                    )
+            elif slug == "valid-parentheses":
+                if language == "python":
+                    starter_code = (
+                        "class Solution:\n"
+                        "    def isValid(self, s: str) -> bool:\n"
+                        "        # 1. Initialize stack to track open brackets\n"
+                        "        stack = []\n"
+                        "        # 2. Map closing brackets to opening brackets\n"
+                        "        mapping = {')': '(', '}': '{', ']': '['}\n"
+                        "        \n"
+                        "        # TODO: Iterate through characters and validate with stack\n"
+                        "        \n"
+                        "        return len(stack) == 0\n"
+                    )
+                else:
+                    starter_code = question.starter_code.get(language) or question.starter_code.get("python")
+            else:
+                starter_code = question.starter_code.get(language) or question.starter_code.get("python")
 
         # Build full feedback
-        if is_approved:
-            full_feedback = f"🎉 **Approach Approved!**\n\n{specific_feedback}\n\n**Algorithm:** {detected_algo}\n**Data Structure:** {detected_ds}\n\nThe code editor has been **unlocked**. Your starter code has been loaded into Monaco."
-        else:
-            reasons = "\n".join([f"- {m}" for m in missing]) if missing else ""
-            full_feedback = f"💡 **Coach Feedback:**\n\n{specific_feedback}\n\n"
-            if missing:
-                full_feedback += f"**To unlock the code editor, please also address:**\n{reasons}"
+        space_complexity = "O(1)" if "o(1)" in lower else ("O(N)" if "o(n)" in lower else None)
+        lang_display = {
+            "python": "Python 3",
+            "cpp": "C++",
+            "java": "Java",
+            "javascript": "JavaScript",
+        }.get(language.lower(), language.capitalize())
 
-        # Estimate realistic token consumption
-        tokens_consumed = min(int(len(prompt.split()) * 1.5 + len(full_feedback.split()) * 1.3), 350)
+        if is_approved:
+            full_feedback = (
+                f"**Approach Approved!**\n\n"
+                f"{specific_feedback}\n\n"
+                f"• **Algorithm:** {detected_algo}\n"
+                f"• **Data Structure:** {detected_ds}\n"
+                f"• **Complexity:** {time_complexity or 'O(N)'} time, {space_complexity or 'O(1)'} space\n\n"
+                f"Below is your starter template for **{lang_display}**. Click **Push to Code Editor** to load it and unlock your workspace."
+            )
+        else:
+            reasons = "\n".join([f"• {m}" for m in missing]) if missing else ""
+            full_feedback = f"**Coach Guidance:**\n\n{specific_feedback}\n\n"
+            if missing:
+                full_feedback += f"**To unlock the code editor, please also explain:**\n{reasons}"
+
+        # Exact BPE-approximating token calculation
+        prompt_tokens = count_tokens(prompt)
+        completion_tokens = count_tokens(full_feedback + (starter_code or ""))
+        turn_tokens = prompt_tokens + completion_tokens
 
         return CoachingResult(
             is_approved=is_approved,
@@ -159,8 +276,11 @@ class AICoachService:
             detected_data_structure=detected_ds,
             detected_algorithm=detected_algo,
             time_complexity=time_complexity,
-            space_complexity="O(1)" if "o(1)" in lower else ("O(N)" if "o(n)" in lower else None),
+            space_complexity=space_complexity,
             missing_requirements=missing,
             starter_code=starter_code,
-            tokens_consumed=tokens_consumed,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            turn_tokens=turn_tokens,
+            tokens_consumed=turn_tokens,
         )

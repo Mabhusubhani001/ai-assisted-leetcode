@@ -17,6 +17,7 @@ from app.schemas.chat import (
     ChatResponse,
 )
 from app.services.ai_coach import AICoachService
+from app.services.llm_coach import LLMCoachService
 
 router = APIRouter(prefix="/chat", tags=["AI Coaching & Approach Validation"])
 
@@ -28,6 +29,8 @@ async def persist_chat_log(
     question_id: uuid.UUID,
     prompt: str,
     response: str,
+    prompt_tokens: int,
+    completion_tokens: int,
     total_tokens: int,
 ):
     """
@@ -53,8 +56,8 @@ async def persist_chat_log(
             question_id=question_id,
             prompt=prompt,
             response=response,
-            prompt_tokens=total_tokens // 2,
-            completion_tokens=total_tokens - (total_tokens // 2),
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
             total_tokens=total_tokens,
         )
         session.add(log)
@@ -92,28 +95,46 @@ async def evaluate_approach(
             detail="Token budget of 2,000 exceeded for this problem. The AI Coach is locked."
         )
 
-    # 3. Evaluate Approach with AI Coach Service
-    eval_result = AICoachService.evaluate_approach(
+    # 3. Retrieve Multi-Turn Conversational Memory from Database
+    recent_logs = await db.scalars(
+        select(ChatLog)
+        .where(ChatLog.user_id == user_id, ChatLog.question_id == question_id)
+        .order_by(ChatLog.created_at.asc())
+        .limit(20)
+    )
+    conversation_history: list[dict[str, str]] = []
+    for log in recent_logs:
+        conversation_history.append({"role": "user", "content": log.prompt})
+        conversation_history.append({"role": "assistant", "content": log.response})
+
+    # 4. Evaluate Approach via Multi-Turn LLM Coach Service (Featherless default / Gemini / Claude BYOK)
+    eval_result = await LLMCoachService.evaluate_with_history(
         question=question,
-        prompt=body.prompt,
-        language=body.language
+        current_prompt=body.prompt,
+        conversation_history=conversation_history,
+        language=body.language,
+        custom_provider=body.custom_provider,
+        custom_api_key=body.custom_api_key,
+        custom_model=body.custom_model,
     )
 
-    # 4. Atomic Token Deduction in Redis
+    # 5. Atomic Token Deduction in Redis
     new_total, is_locked = await guardrail.increment_tokens(
         user_id=user_id,
         question_id=question_id,
         token_delta=eval_result.tokens_consumed
     )
 
-    # 5. Non-blocking Background Persistence to PostgreSQL
+    # 6. Non-blocking Background Persistence to PostgreSQL
     background_tasks.add_task(
         persist_chat_log,
         user_id=user_id,
         question_id=question_id,
         prompt=body.prompt,
         response=eval_result.feedback,
-        total_tokens=eval_result.tokens_consumed
+        prompt_tokens=eval_result.prompt_tokens,
+        completion_tokens=eval_result.completion_tokens,
+        total_tokens=eval_result.tokens_consumed,
     )
 
     return ChatEvaluationResponse(
@@ -125,10 +146,15 @@ async def evaluate_approach(
         space_complexity=eval_result.space_complexity,
         missing_requirements=eval_result.missing_requirements,
         starter_code=eval_result.starter_code,
+        prompt_tokens=eval_result.prompt_tokens,
+        completion_tokens=eval_result.completion_tokens,
+        turn_tokens=eval_result.turn_tokens,
         tokens_consumed=eval_result.tokens_consumed,
         tokens_used=new_total,
         token_limit=guardrail.token_limit,
         is_locked=is_locked,
+        provider_used=eval_result.provider_used,
+        model_used=eval_result.model_used,
     )
 
 @router.get("/history/{question_id}", response_model=list[ChatResponse])

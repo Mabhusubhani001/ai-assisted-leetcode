@@ -35,6 +35,7 @@ class SubmissionResponse(BaseModel):
     stderr: str | None = None
     passed_test_cases: int
     total_test_cases: int
+    failed_test_case_info: dict | None = None
     created_at: datetime.datetime
 
     model_config = ConfigDict(from_attributes=True)

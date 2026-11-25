@@ -86,7 +86,11 @@ async def submit_code(
     await db.commit()
     await db.refresh(submission)
 
-    return submission
+    # Attach transient execution feedback (failed test case details for public tests)
+    response_dto = SubmissionResponse.model_validate(submission)
+    response_dto.failed_test_case_info = exec_result.failed_test_case_info
+
+    return response_dto
 
 @router.get("/{submission_id}", response_model=SubmissionResponse)
 async def get_submission(

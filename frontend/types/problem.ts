@@ -25,10 +25,15 @@ export interface ChatEvaluation {
   space_complexity?: string | null;
   missing_requirements: string[];
   starter_code?: string | null;
+  prompt_tokens?: number;
+  completion_tokens?: number;
+  turn_tokens?: number;
   tokens_consumed: number;
   tokens_used: number;
   token_limit: number;
   is_locked: boolean;
+  provider_used?: string;
+  model_used?: string;
 }
 
 export interface SubmissionResponse {
@@ -44,5 +49,13 @@ export interface SubmissionResponse {
   stderr?: string | null;
   passed_test_cases: number;
   total_test_cases: number;
+  failed_test_case_info?: {
+    test_case_number?: number;
+    stdin?: string;
+    expected_stdout?: string;
+    actual_stdout?: string;
+    is_hidden?: boolean;
+    message?: string;
+  } | null;
   created_at: string;
 }
