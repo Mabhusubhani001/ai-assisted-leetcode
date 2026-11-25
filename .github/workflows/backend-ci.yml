@@ -1,0 +1,80 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  backend-test:
+    name: Backend Test Suite & Migrations
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: leetcode_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Run Alembic Database Migrations
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/leetcode_db
+          REDIS_URL: redis://localhost:6379/0
+          ENVIRONMENT: development
+        run: |
+          cd backend
+          alembic upgrade head
+
+      - name: Seed Database Test Cases & Questions
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/leetcode_db
+          REDIS_URL: redis://localhost:6379/0
+          ENVIRONMENT: development
+        run: |
+          cd backend
+          python -m app.db.seed
+
+      - name: Run Pytest Test Suite
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/leetcode_db
+          REDIS_URL: redis://localhost:6379/0
+          ENVIRONMENT: development
+          CLERK_SECRET_KEY: test_clerk_secret_key
+        run: |
+          cd backend
+          pytest -v tests

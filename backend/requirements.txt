@@ -29,3 +29,7 @@ python-dotenv>=1.0.1
 svix>=1.20.0
 pyjwt[crypto]>=2.9.0
 
+# Testing Suite
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+
