@@ -3,9 +3,9 @@ import { PracticeWorkspace } from "@/components/workspace/PracticeWorkspace";
 import { QuestionDetail } from "@/types/problem";
 
 interface ProblemPageProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
 // Fallback seed catalog for offline prerendering and fast development SSR
@@ -134,7 +134,8 @@ async function getProblem(slug: string): Promise<QuestionDetail | null> {
 }
 
 export default async function ProblemPage({ params }: ProblemPageProps) {
-  const problem = await getProblem(params.slug);
+  const { slug } = await params;
+  const problem = await getProblem(slug);
 
   if (!problem) {
     notFound();

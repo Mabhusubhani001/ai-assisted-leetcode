@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import { ClerkProvider, SignInButton, SignUpButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { ClerkProvider, SignInButton, SignUpButton, Show, UserButton } from "@clerk/nextjs";
+import { Suspense } from "react";
 import Link from "next/link";
-import { Code2, Sparkles, Terminal } from "lucide-react";
+import { Code2 } from "lucide-react";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,9 +16,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      <html lang="en" className="dark">
-        <body className="bg-zinc-950 text-zinc-100 min-h-screen flex flex-col font-sans antialiased">
+    <html lang="en" className="dark">
+      <body className="bg-zinc-950 text-zinc-100 min-h-screen flex flex-col font-sans antialiased">
+        <ClerkProvider>
           {/* Universal Header */}
           <header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur sticky top-0 z-50">
             <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
@@ -33,28 +34,30 @@ export default function RootLayout({
                   Problem Catalog
                 </Link>
 
-                <SignedOut>
-                  <SignInButton mode="modal">
-                    <button className="px-3 py-1.5 text-xs font-medium text-zinc-300 hover:text-white transition-colors">
-                      Sign In
-                    </button>
-                  </SignInButton>
-                  <SignUpButton mode="modal">
-                    <button className="px-3 py-1.5 text-xs font-semibold bg-emerald-500 text-zinc-950 hover:bg-emerald-400 rounded-md transition-colors shadow-sm">
-                      Get Started
-                    </button>
-                  </SignUpButton>
-                </SignedOut>
+                <Suspense fallback={<div className="w-20 h-6" />}>
+                  <Show when="signed-out">
+                    <SignInButton mode="modal">
+                      <button className="px-3 py-1.5 text-xs font-medium text-zinc-300 hover:text-white transition-colors">
+                        Sign In
+                      </button>
+                    </SignInButton>
+                    <SignUpButton mode="modal">
+                      <button className="px-3 py-1.5 text-xs font-semibold bg-emerald-500 text-zinc-950 hover:bg-emerald-400 rounded-md transition-colors shadow-sm">
+                        Get Started
+                      </button>
+                    </SignUpButton>
+                  </Show>
 
-                <SignedIn>
-                  <UserButton
-                    appearance={{
-                      elements: {
-                        avatarBox: "w-8 h-8 rounded-full border border-zinc-700",
-                      },
-                    }}
-                  />
-                </SignedIn>
+                  <Show when="signed-in">
+                    <UserButton
+                      appearance={{
+                        elements: {
+                          avatarBox: "w-8 h-8 rounded-full border border-zinc-700",
+                        },
+                      }}
+                    />
+                  </Show>
+                </Suspense>
               </div>
             </div>
           </header>
@@ -63,8 +66,8 @@ export default function RootLayout({
           <main className="flex-1 flex flex-col">
             {children}
           </main>
-        </body>
-      </html>
-    </ClerkProvider>
+        </ClerkProvider>
+      </body>
+    </html>
   );
 }
