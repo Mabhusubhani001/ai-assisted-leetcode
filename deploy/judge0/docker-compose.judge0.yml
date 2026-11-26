@@ -1,0 +1,66 @@
+# ==============================================================================
+# Self-Hosted Judge0 CE (Community Edition) - Production Stack
+# 100% Free & Open Source under GPLv3.
+# Deploy this on a dedicated AWS EC2 instance (e.g. Ubuntu 24.04 on t3.small).
+# ==============================================================================
+version: "3.8"
+
+services:
+  server:
+    image: judge0/judge0:1.13.1
+    volumes:
+      - ./judge0.conf:/judge0.conf:ro
+    ports:
+      - "2358:2358"
+    privileged: true
+    restart: always
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=judge0
+      - POSTGRES_PASSWORD=judge0_secure_password
+      - POSTGRES_DB=judge0
+    depends_on:
+      - db
+      - redis
+
+  workers:
+    image: judge0/judge0:1.13.1
+    command: ["./scripts/workers"]
+    volumes:
+      - ./judge0.conf:/judge0.conf:ro
+    privileged: true
+    restart: always
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - POSTGRES_USER=judge0
+      - POSTGRES_PASSWORD=judge0_secure_password
+      - POSTGRES_DB=judge0
+    depends_on:
+      - db
+      - redis
+
+  db:
+    image: postgres:13-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=judge0
+      - POSTGRES_PASSWORD=judge0_secure_password
+      - POSTGRES_DB=judge0
+    volumes:
+      - judge0_db_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    volumes:
+      - judge0_redis_data:/data
+
+volumes:
+  judge0_db_data:
+  judge0_redis_data:

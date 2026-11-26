@@ -37,6 +37,12 @@ class Settings(BaseSettings):
     CLERK_JWKS_URL: str = ""
     CLERK_PEM_PUBLIC_KEY: str = ""
 
+    # Judge0 Sandboxed Execution Configuration (Self-Hosted on EC2 or RapidAPI)
+    JUDGE0_API_URL: str = ""  # e.g. "http://judge0.internal:2358" or "https://judge0-ce.p.rapidapi.com"
+    JUDGE0_AUTH_TOKEN: str = ""  # Optional auth token for self-hosted Judge0
+    JUDGE0_RAPIDAPI_KEY: str = ""  # Optional RapidAPI key if using managed Judge0
+    JUDGE0_RAPIDAPI_HOST: str = "judge0-ce.p.rapidapi.com"
+
     model_config = SettingsConfigDict(
         env_file=(".env", "../.env"),
         extra="ignore"
