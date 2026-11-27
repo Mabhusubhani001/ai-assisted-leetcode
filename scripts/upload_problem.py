@@ -18,6 +18,18 @@ import urllib.request
 import urllib.error
 import os
 
+# Auto-load ADMIN_API_KEY from local .env if available
+env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+if os.path.exists(env_path):
+    try:
+        with open(env_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("ADMIN_API_KEY=") and not os.environ.get("ADMIN_API_KEY"):
+                    os.environ["ADMIN_API_KEY"] = line.split("=", 1)[1].strip(" '\"\r\n")
+    except Exception:
+        pass
+
 DEFAULT_URL = os.environ.get(
     "API_URL",
     "http://production-dsa-alb-209746966.ap-southeast-2.elb.amazonaws.com"

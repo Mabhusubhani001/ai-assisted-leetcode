@@ -29,13 +29,21 @@ class CodeExecutorService:
     Sandboxed Code Execution Engine.
     Executes student solutions against public and hidden test cases with strict 2.0s timeouts.
     Guarantees that hidden test case inputs are NEVER disclosed on wrong answers.
+    Supports Python 3, C++, Java 17, and JavaScript with language-specific test drivers.
     """
 
+    LANGUAGE_MAP = {
+        71: "python",
+        54: "cpp",
+        62: "java",
+        63: "javascript",
+    }
+
     @classmethod
-    def _generate_python_harness(cls, slug: str, source_code: str) -> str:
-        """Wraps student solution with a driver that reads stdin and outputs formatted JSON."""
-        if slug == "two-sum":
-            driver = """
+    def _get_legacy_python_driver(cls, slug: str) -> str:
+        """Fallback driver definitions for initial seed questions."""
+        if slug in ("two-sum", "two-sum-ii-input-array-is-sorted"):
+            return """
 import sys, json
 
 lines = sys.stdin.read().strip().splitlines()
@@ -51,7 +59,7 @@ ans = sol.twoSum(nums, target)
 print(json.dumps(ans))
 """
         elif slug == "valid-parentheses":
-            driver = """
+            return """
 import sys
 
 raw = sys.stdin.read()
@@ -62,7 +70,7 @@ ans = sol.isValid(s)
 print("true" if ans else "false")
 """
         elif slug == "reverse-linked-list":
-            driver = """
+            return """
 import sys, json
 
 class ListNode:
@@ -94,9 +102,46 @@ sol = Solution()
 reversed_head = sol.reverseList(head)
 print(json.dumps(to_array(reversed_head)))
 """
-        else:
-            driver = "import sys\nprint(sys.stdin.read().strip())"
+        return "import sys\nprint(sys.stdin.read().strip())"
 
+    @classmethod
+    def _generate_executable_code(
+        cls, question: Question, source_code: str, language_id: int = 71
+    ) -> str:
+        """
+        Assembles student solution with the language-specific test driver.
+        1. Checks if question.driver_code has a driver for this language.
+        2. Falls back to legacy drivers if present.
+        3. Appends preamble/headers where appropriate.
+        """
+        lang_key = cls.LANGUAGE_MAP.get(language_id, "python")
+        slug = question.slug
+        driver = ""
+
+        # 1. Fetch dynamic driver from question model
+        driver_dict = getattr(question, "driver_code", None) or {}
+        if isinstance(driver_dict, dict) and driver_dict.get(lang_key):
+            driver = driver_dict[lang_key]
+        elif language_id == 71:
+            driver = cls._get_legacy_python_driver(slug)
+
+        if not driver:
+            return source_code
+
+        # 2. Wrap source code with language driver
+        if language_id == 71:  # Python 3
+            preamble = (
+                "from typing import List, Dict, Tuple, Set, Optional, Any, Union\n"
+                "import sys, json, math, collections, heapq\n\n"
+            )
+            return f"{preamble}{source_code}\n\n{driver}"
+        else:  # C++, Java, JavaScript
+            return f"{source_code}\n\n{driver}"
+
+    # Retain backwards-compatible alias for existing tests
+    @classmethod
+    def _generate_python_harness(cls, slug: str, source_code: str) -> str:
+        driver = cls._get_legacy_python_driver(slug)
         preamble = (
             "from typing import List, Dict, Tuple, Set, Optional, Any, Union\n"
             "import sys, json, math, collections, heapq\n\n"
@@ -133,10 +178,7 @@ print(json.dumps(to_array(reversed_head)))
             headers["X-RapidAPI-Host"] = settings.JUDGE0_RAPIDAPI_HOST
 
         # Generate language-appropriate test harness
-        if language_id == 71:  # Python 3
-            executable_code = cls._generate_python_harness(slug, source_code)
-        else:
-            executable_code = source_code
+        executable_code = cls._generate_executable_code(question, source_code, language_id)
 
         b64_source = base64.b64encode(executable_code.encode("utf-8")).decode("ascii")
         api_url = f"{settings.JUDGE0_API_URL.rstrip('/')}/submissions?base64_encoded=true&wait=true"
@@ -278,7 +320,7 @@ print(json.dumps(to_array(reversed_head)))
         passed_count = 0
         max_time = 0.0
 
-        harness_code = cls._generate_python_harness(slug, source_code)
+        harness_code = cls._generate_executable_code(question, source_code, language_id)
 
         with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as f:
             f.write(harness_code)

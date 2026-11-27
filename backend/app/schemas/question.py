@@ -12,6 +12,7 @@ class QuestionBase(BaseModel):
     difficulty: DifficultyType
     description: str = Field(description="Markdown description of the problem")
     starter_code: dict[str, str] = Field(default_factory=dict, description="Starter code keyed by language")
+    driver_code: dict[str, str] = Field(default_factory=dict, description="Driver test harness code keyed by language")
     memory_limit_mb: int = Field(default=256, ge=16, le=1024)
     time_limit_sec: float = Field(default=2.0, ge=0.1, le=10.0)
 

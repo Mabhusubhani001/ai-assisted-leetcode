@@ -94,6 +94,7 @@ async def create_or_update_question(
         question.difficulty = payload.difficulty
         question.description = payload.description
         question.starter_code = payload.starter_code
+        question.driver_code = payload.driver_code
         question.memory_limit_mb = payload.memory_limit_mb
         question.time_limit_sec = payload.time_limit_sec
         question.is_published = payload.is_published
@@ -107,6 +108,7 @@ async def create_or_update_question(
             difficulty=payload.difficulty,
             description=payload.description,
             starter_code=payload.starter_code,
+            driver_code=payload.driver_code,
             memory_limit_mb=payload.memory_limit_mb,
             time_limit_sec=payload.time_limit_sec,
             is_published=payload.is_published,

@@ -9,6 +9,12 @@
     "java": "class Solution {\n    public int[] twoSum(int[] numbers, int target) {\n        return new int[]{};\n    }\n}\n",
     "javascript": "/**\n * @param {number[]} numbers\n * @param {number} target\n * @return {number[]}\n */\nvar twoSum = function(numbers, target) {\n    \n};\n"
   },
+  "driver_code": {
+    "python": "import sys, json\nlines = sys.stdin.read().strip().splitlines()\nif not lines:\n    print('[]')\n    sys.exit(0)\nnums = [int(x) for x in lines[0].split()]\ntarget = int(lines[1])\nsol = Solution()\nans = sol.twoSum(nums, target)\nprint(json.dumps(ans))",
+    "cpp": "#include <iostream>\n#include <vector>\n#include <sstream>\nusing namespace std;\n\nint main() {\n    string line;\n    if (!getline(cin, line) || line.empty()) {\n        cout << \"[]\" << endl;\n        return 0;\n    }\n    stringstream ss(line);\n    vector<int> numbers;\n    int val, target;\n    while (ss >> val) numbers.push_back(val);\n    if (!(cin >> target)) return 0;\n    Solution sol;\n    vector<int> res = sol.twoSum(numbers, target);\n    cout << \"[\" << res[0] << \", \" << res[1] << \"]\" << endl;\n    return 0;\n}",
+    "java": "import java.util.*;\n\npublic class Main {\n    public static void main(String[] args) {\n        Scanner sc = new Scanner(System.in);\n        if (!sc.hasNextLine()) {\n            System.out.println(\"[]\");\n            return;\n        }\n        String line = sc.nextLine().trim();\n        if (line.isEmpty()) {\n            System.out.println(\"[]\");\n            return;\n        }\n        String[] parts = line.split(\"\\\\s+\");\n        int[] numbers = new int[parts.length];\n        for (int i = 0; i < parts.length; i++) {\n            numbers[i] = Integer.parseInt(parts[i]);\n        }\n        if (!sc.hasNextInt()) return;\n        int target = sc.nextInt();\n        Solution sol = new Solution();\n        int[] res = sol.twoSum(numbers, target);\n        System.out.println(Arrays.toString(res));\n    }\n}",
+    "javascript": "const fs = require('fs');\nconst input = fs.readFileSync(0, 'utf-8').trim().split('\\n');\nif (input.length >= 2) {\n    const numbers = input[0].trim().split(/\\s+/).map(Number);\n    const target = Number(input[1].trim());\n    const ans = twoSum(numbers, target);\n    console.log(JSON.stringify(ans));\n} else {\n    console.log('[]');\n}"
+  },
   "memory_limit_mb": 256,
   "time_limit_sec": 2.0,
   "is_published": true,

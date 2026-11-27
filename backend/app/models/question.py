@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import String, Text, Integer, Float, Boolean, func
+from sqlalchemy import String, Text, Integer, Float, Boolean, func, text
 from sqlalchemy.dialects.postgresql import UUID, JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
@@ -29,6 +29,7 @@ class Question(Base, TimestampMixin):
     difficulty: Mapped[str] = mapped_column(String(20), nullable=False)  # easy, medium, hard
     description: Mapped[str] = mapped_column(Text, nullable=False)  # Markdown
     starter_code: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    driver_code: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
     memory_limit_mb: Mapped[int] = mapped_column(Integer, default=256, nullable=False)
     time_limit_sec: Mapped[float] = mapped_column(Float, default=2.0, nullable=False)
     is_published: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
