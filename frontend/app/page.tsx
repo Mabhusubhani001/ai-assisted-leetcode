@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { useAuth, SignedIn, SignedOut, RedirectToSignIn } from "@clerk/nextjs";
+import { useAuth, Show, RedirectToSignIn } from "@clerk/nextjs";
 import { CheckCircle2, Clock, Circle, Trophy, ArrowRight, Sparkles } from "lucide-react";
 import { StudentCatalogSummary } from "@/types/problem";
 
@@ -78,9 +78,8 @@ export default function HomePage() {
   const progressPct = Math.round((totalSolved / totalProblems) * 100);
 
   return (
-    <>
-      <SignedIn>
-        <div className="max-w-5xl mx-auto px-4 py-10 w-full flex-1 flex flex-col select-text">
+    <Show when="signed-in" fallback={<RedirectToSignIn />}>
+      <div className="max-w-5xl mx-auto px-4 py-10 w-full flex-1 flex flex-col select-text">
       {/* Header Section */}
       <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
@@ -222,10 +221,6 @@ export default function HomePage() {
         </div>
       </div>
     </div>
-  </SignedIn>
-  <SignedOut>
-    <RedirectToSignIn />
-  </SignedOut>
-</>
+  </Show>
   );
 }
