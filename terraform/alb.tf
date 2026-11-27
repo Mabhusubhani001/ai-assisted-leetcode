@@ -10,6 +10,7 @@ resource "aws_lb" "main" {
   subnets            = aws_subnet.public[*].id
 
   enable_deletion_protection = false
+  idle_timeout               = 300 # 5 minutes for AI generation and LLM streams
 
   tags = {
     Name = "${var.environment}-dsa-alb"

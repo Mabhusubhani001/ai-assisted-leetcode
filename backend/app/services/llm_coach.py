@@ -100,11 +100,10 @@ class LLMCoachService:
     Strict input-token accounting (the 2,000 budget applies exclusively to input tokens).
     """
 
-    PRIMARY_MODEL = settings.GEMINI_PRIMARY_MODEL or "gemini-3.8-flash"
+    PRIMARY_MODEL = getattr(settings, "GEMINI_PRIMARY_MODEL", None) or "gemini-3.5-flash-lite"
     FALLBACK_MODELS = getattr(settings, "GEMINI_FALLBACK_MODELS", [
-        "gemini-3.6-flash",
-        "gemini-3.5-flash-lite",
         "gemini-3.1-flash-lite",
+        "gemini-4-hydrogen",
     ])
     BASE_URL = settings.GEMINI_BASE_URL or "https://generativelanguage.googleapis.com/v1beta/openai/"
 
@@ -176,7 +175,7 @@ class LLMCoachService:
                 model_used="offline_fallback",
             )
 
-        client = AsyncOpenAI(base_url=cls.BASE_URL, api_key=api_key)
+        client = AsyncOpenAI(base_url=cls.BASE_URL, api_key=api_key, timeout=25.0)
 
         system_prompt = (
             SYSTEM_PROMPT_TEMPLATE
@@ -270,30 +269,52 @@ class LLMCoachService:
             )
 
         except Exception as err:
-            err_details = ""
-            if hasattr(err, "response") and hasattr(err.response, "text"):
-                err_details = f" - Details: {err.response.text}"
-                logger.error("Gemini API Error Response: %s", err.response.text)
-            logger.exception("Gemini Coach invocation error")
-            err_msg = str(err) + err_details
+            logger.exception("Gemini Coach invocation error: %s", err)
+            err_msg = str(err).lower()
 
-            if "api_key" in err_msg.lower() or not client.api_key:
+            if "api_key" in err_msg or not client.api_key:
                 feedback = (
                     "**Google Gemini API Key Required:**\n\n"
                     "Please enter a valid **Google Gemini API Key** in the settings menu (**⚙️**) above. "
                     "You can get a free key instantly from [Google AI Studio](https://aistudio.google.com)."
                 )
-            else:
-                feedback = f"**AI Coach Notice:**\n\nUnable to reach Google Gemini ({model_used_tag}): {err_msg}."
+                return LLMCoachingResult(
+                    is_approved=False,
+                    feedback=feedback,
+                    missing_requirements=["Active Google Gemini API connection"],
+                    prompt_tokens=10,
+                    completion_tokens=25,
+                    turn_tokens=10,
+                    tokens_consumed=10,
+                    provider_used="gemini",
+                    model_used=model_used_tag,
+                )
 
+            # High-resilience fallback: Synthesize full conversation history via deterministic evaluator
+            from app.services.ai_coach import AICoachService
+            clean_history = [
+                m["content"] for m in conversation_history
+                if m.get("role") == "user" and not AICoachService.check_prompt_injection(m["content"])
+            ]
+            full_context = " ".join(clean_history + [current_prompt])
+            fallback = AICoachService.evaluate_approach(
+                question=question,
+                prompt=full_context,
+                language=language,
+            )
             return LLMCoachingResult(
-                is_approved=False,
-                feedback=feedback,
-                missing_requirements=["Active Google Gemini API connection"],
-                prompt_tokens=10,
-                completion_tokens=25,
-                turn_tokens=10,
-                tokens_consumed=10,
+                is_approved=fallback.is_approved,
+                feedback=fallback.feedback,
+                detected_data_structure=fallback.detected_data_structure,
+                detected_algorithm=fallback.detected_algorithm,
+                time_complexity=fallback.time_complexity,
+                space_complexity=fallback.space_complexity,
+                missing_requirements=fallback.missing_requirements,
+                starter_code=fallback.starter_code,
+                prompt_tokens=fallback.prompt_tokens,
+                completion_tokens=fallback.completion_tokens,
+                turn_tokens=fallback.prompt_tokens,
+                tokens_consumed=fallback.prompt_tokens,
                 provider_used="gemini",
-                model_used=model_used_tag,
+                model_used="resilient_fallback",
             )
