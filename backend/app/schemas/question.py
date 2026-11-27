@@ -2,7 +2,7 @@ import uuid
 import datetime
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Literal
-from app.schemas.test_case import TestCasePublicResponse
+from app.schemas.test_case import TestCaseCreate, TestCasePublicResponse
 
 DifficultyType = Literal["easy", "medium", "hard"]
 
@@ -18,6 +18,14 @@ class QuestionBase(BaseModel):
 class QuestionCreate(QuestionBase):
     """Schema used by admins to create questions."""
     is_published: bool = False
+
+class QuestionAdminCreate(QuestionBase):
+    """Schema used by admins and CLI to create or upsert questions with full test cases."""
+    is_published: bool = True
+    test_cases: list[TestCaseCreate] = Field(
+        default_factory=list,
+        description="List of test cases including visible and hidden cases"
+    )
 
 class QuestionPublicResponse(QuestionBase):
     """

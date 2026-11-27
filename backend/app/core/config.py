@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     JUDGE0_RAPIDAPI_KEY: str = ""  # Optional RapidAPI key if using managed Judge0
     JUDGE0_RAPIDAPI_HOST: str = "judge0-ce.p.rapidapi.com"
 
+    # Admin CLI & Portal Secret Key
+    ADMIN_API_KEY: str = "dsa_admin_secret_key_change_in_prod"
+
     model_config = SettingsConfigDict(
         env_file=(".env", "../.env"),
         extra="ignore"

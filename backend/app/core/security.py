@@ -1,7 +1,7 @@
 from typing import Annotated
 import jwt
 from jwt import PyJWKClient
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.core.config import settings
 
@@ -79,3 +79,42 @@ async def get_current_user(
         )
 
 CurrentUser = Annotated[dict, Depends(get_current_user)]
+
+# Optional bearer authentication scheme for endpoints with dual/flexible auth
+security_scheme_optional = HTTPBearer(auto_error=False)
+
+async def get_current_user_optional(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(security_scheme_optional)] = None
+) -> dict | None:
+    """
+    Extracts and validates Clerk JWT if provided in Bearer header.
+    Returns None if missing or invalid instead of throwing HTTP 401 immediately.
+    """
+    if not credentials:
+        return None
+    try:
+        return await get_current_user(credentials)
+    except HTTPException:
+        return None
+
+async def require_admin(
+    x_admin_key: Annotated[str | None, Header(alias="X-Admin-Key")] = None,
+    current_user: Annotated[dict | None, Depends(get_current_user_optional)] = None,
+) -> dict:
+    """
+    Dual-auth administrative security dependency:
+    1. Header 'X-Admin-Key': Direct machine/CLI access using ADMIN_API_KEY.
+    2. Clerk Session JWT: User with role == 'admin' in claims or metadata.
+    """
+    if x_admin_key and x_admin_key == settings.ADMIN_API_KEY:
+        return {"sub": "admin_cli", "role": "admin"}
+
+    if current_user:
+        role = current_user.get("role") or current_user.get("public_metadata", {}).get("role")
+        if role == "admin":
+            return current_user
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Admin access required: provide valid X-Admin-Key header or Clerk admin credentials."
+    )
