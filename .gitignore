@@ -80,6 +80,7 @@ temp/
 *.tfstate.*
 *.tfvars
 !*.tfvars.example
+*.zip
 
 .claude/
 .agents/

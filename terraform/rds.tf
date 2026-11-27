@@ -17,7 +17,7 @@ resource "aws_db_subnet_group" "main" {
 resource "aws_db_instance" "postgres" {
   identifier            = "${var.environment}-leetcode-postgres"
   engine                = "postgres"
-  engine_version        = "16.3"
+  engine_version        = "16.16"
   instance_class        = var.db_instance_class
   allocated_storage     = 20
   max_allocated_storage = 100 # Auto-scales disk storage up to 100 GB
