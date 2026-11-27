@@ -25,7 +25,10 @@ COPY . .
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_placeholder_for_build_only \
-    NEXT_PUBLIC_API_URL=http://backend:8000
+    NEXT_PUBLIC_API_URL=""
+
+# Ensure public directory exists and populate Monaco editor AMD distribution
+RUN mkdir -p public && node scripts/copy-monaco.js
 
 RUN npm run build
 
