@@ -102,6 +102,9 @@ resource "aws_launch_template" "app" {
               echo "GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/" >> .env
               echo "GEMINI_PRIMARY_MODEL=gemini-3.8-flash" >> .env
               echo "GEMINI_FALLBACK_MODEL=gemini-3.5-flash-lite" >> .env
+              echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_dG9waWNhbC1wcmF3bi0xNjcuY2xlcmsuYWNjb3VudHMuZGV2JA" >> .env
+              echo "CLERK_SECRET_KEY=sk_test_dwlTxbPJ0AVgZITMFoZJ459VIVvH5lK9qKZipPP0EU" >> .env
+              echo "NEXT_PUBLIC_API_URL=" >> .env
 
               # 6. Build and launch production containers
               /usr/local/lib/docker/cli-plugins/docker-compose -f docker-compose.aws.yml up -d --build

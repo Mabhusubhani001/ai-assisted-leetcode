@@ -42,6 +42,7 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "http://localhost:3001",
     ],
+    allow_origin_regex=r"^https?://.*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -51,6 +52,7 @@ app.add_middleware(
 app.include_router(api_router)
 
 @app.get("/health")
+@app.get("/api/v1/health")
 async def health_check():
     return {
         "status": "healthy",

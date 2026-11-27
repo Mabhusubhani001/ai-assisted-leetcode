@@ -36,9 +36,14 @@ services:
       dockerfile: Dockerfile
     container_name: leetcode_frontend
     restart: always
+    env_file:
+      - .env
     environment:
       NODE_ENV: production
       PORT: 3000
+      HOSTNAME: "0.0.0.0"
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_dG9waWNhbC1wcmF3bi0xNjcuY2xlcmsuYWNjb3VudHMuZGV2JA"
+      CLERK_SECRET_KEY: "sk_test_dwlTxbPJ0AVgZITMFoZJ459VIVvH5lK9qKZipPP0EU"
     ports:
       - "3000:3000"
     depends_on:

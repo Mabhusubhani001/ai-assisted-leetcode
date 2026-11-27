@@ -1,6 +1,15 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
-export default clerkMiddleware();
+const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+export default function middleware(req: any, evt: any) {
+  // If Clerk publishable key is missing or placeholder, allow traffic without crashing Next.js
+  if (!publishableKey || !publishableKey.startsWith("pk_") || publishableKey.includes("placeholder")) {
+    return NextResponse.next();
+  }
+  return clerkMiddleware()(req, evt);
+}
 
 export const config = {
   matcher: [

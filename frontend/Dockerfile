@@ -24,7 +24,7 @@ COPY . .
 # Set production environment and placeholder keys for static prerendering
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
-    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_placeholder_for_build_only \
+    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_dG9waWNhbC1wcmF3bi0xNjcuY2xlcmsuYWNjb3VudHMuZGV2JA \
     NEXT_PUBLIC_API_URL=""
 
 # Ensure public directory exists and populate Monaco editor AMD distribution
@@ -41,7 +41,8 @@ WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
-    HOSTNAME="0.0.0.0"
+    HOSTNAME="0.0.0.0" \
+    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_dG9waWNhbC1wcmF3bi0xNjcuY2xlcmsuYWNjb3VudHMuZGV2JA
 
 # Create unprivileged system group and user
 RUN addgroup --system --gid 1001 nodejs && \
