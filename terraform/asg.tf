@@ -68,19 +68,52 @@ resource "aws_launch_template" "app" {
               #!/bin/bash
               set -ex
 
-              # 1. Update OS and install Docker + Git
+              # 1. Allocate 2GB Swap to ensure Next.js builds cleanly on t3.micro (1GB RAM)
+              dd if=/dev/zero of=/swapfile bs=128M count=16
+              chmod 600 /swapfile
+              mkswap /swapfile
+              swapon /swapfile
+              echo "/swapfile swap swap defaults 0 0" >> /etc/fstab
+
+              # 2. Update OS and install Docker + Git
               dnf update -y
               dnf install -y docker git
               systemctl enable docker
               systemctl start docker
               usermod -a -G docker ec2-user
 
-              # 2. Install Docker Compose plugin
+              # 3. Install Docker Compose plugin
               mkdir -p /usr/local/lib/docker/cli-plugins
               curl -SL https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
               chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
-              echo "EC2 Instance successfully provisioned for DSA Assessment Platform."
+              # 4. Clone Application Codebase
+              cd /home/ec2-user
+              rm -rf app
+              git clone https://github.com/Mabhusubhani001/ai-assisted-leetcode.git app
+              cd app
+
+              # 5. Generate Production .env with Live RDS Database Endpoint
+              cat << ENVEOF > .env
+              ENVIRONMENT=production
+              DATABASE_URL=postgresql+asyncpg://${var.db_username}:${var.db_password}@${aws_db_instance.postgres.endpoint}/${var.db_name}
+              REDIS_URL=redis://redis:6379/0
+              QUESTION_TOKEN_LIMIT=2000
+              GEMINI_API_KEY=
+              GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/
+              GEMINI_PRIMARY_MODEL=gemini-3.8-flash
+              GEMINI_FALLBACK_MODEL=gemini-3.5-flash-lite
+              ENVEOF
+
+              # 6. Build and launch production containers
+              /usr/local/lib/docker/cli-plugins/docker-compose -f docker-compose.aws.yml up -d --build
+
+              # 7. Apply Alembic Migrations and Seed Database Questions
+              sleep 15
+              docker exec leetcode_backend /opt/venv/bin/alembic upgrade head || true
+              docker exec leetcode_backend /opt/venv/bin/python -m app.db.seed || true
+
+              echo "DSA Assessment Platform deployment completed successfully."
               EOF
   )
 
@@ -109,7 +142,7 @@ resource "aws_autoscaling_group" "app" {
   desired_capacity = var.asg_desired_capacity
 
   health_check_type         = "ELB"
-  health_check_grace_period = 300
+  health_check_grace_period = 600
 
   target_group_arns = [
     aws_lb_target_group.frontend.arn,
