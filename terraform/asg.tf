@@ -139,9 +139,10 @@ resource "aws_autoscaling_group" "app" {
   name_prefix         = "${var.environment}-dsa-asg-"
   vpc_zone_identifier = aws_subnet.private[*].id
 
-  min_size         = var.asg_min_size
-  max_size         = var.asg_max_size
-  desired_capacity = var.asg_desired_capacity
+  min_size                  = var.asg_min_size
+  max_size                  = var.asg_max_size
+  desired_capacity          = var.asg_desired_capacity
+  wait_for_capacity_timeout = "0"
 
   health_check_type         = "ELB"
   health_check_grace_period = 600
