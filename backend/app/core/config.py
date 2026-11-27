@@ -32,9 +32,9 @@ class Settings(BaseSettings):
 
     # Clerk Authentication & Webhook Sync
     CLERK_SECRET_KEY: str = ""
-    CLERK_PUBLISHABLE_KEY: str = ""
+    CLERK_PUBLISHABLE_KEY: str = "pk_test_dG9waWNhbC1wcmF3bi0xNjcuY2xlcmsuYWNjb3VudHMuZGV2JA"
     CLERK_WEBHOOK_SECRET: str = "whsec_local_test_key"
-    CLERK_JWKS_URL: str = ""
+    CLERK_JWKS_URL: str = "https://topical-prawn-167.clerk.accounts.dev/.well-known/jwks.json"
     CLERK_PEM_PUBLIC_KEY: str = ""
 
     # Judge0 Sandboxed Execution Configuration (Self-Hosted on EC2 or RapidAPI)

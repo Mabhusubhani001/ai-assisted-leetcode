@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { useAuth } from "@clerk/nextjs";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
@@ -51,6 +52,7 @@ export function AICoachPane({
   onPushToEditor,
   onTokenUpdate,
 }: AICoachPaneProps) {
+  const { getToken } = useAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "initial-msg",
@@ -104,12 +106,16 @@ export function AICoachPane({
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+      const token = await getToken();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const res = await fetch(`${apiUrl}/api/v1/chat/message`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer dev_user_student42",
-        },
+        headers,
         body: JSON.stringify({
           question_id: questionId,
           prompt: textToSend,

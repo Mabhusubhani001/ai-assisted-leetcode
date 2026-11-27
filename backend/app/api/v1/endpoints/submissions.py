@@ -3,12 +3,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, case
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from app.core.database import get_db
 from app.core.security import CurrentUser
 from app.models.question import Question
 from app.models.test_case import TestCase
 from app.models.submission import Submission
+from app.models.user import User
 from app.schemas.submission import (
     SubmissionCreate,
     SubmissionResponse,
@@ -55,6 +57,20 @@ async def submit_code(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="No test cases configured for this question."
         )
+
+    # Ensure user exists in users table to satisfy foreign key constraint atomically
+    user_email = current_user.get("email") or f"{user_id}@example.com"
+    user_upsert = (
+        pg_insert(User)
+        .values(
+            id=user_id,
+            email=user_email,
+            role=current_user.get("role", "student"),
+            is_active=True,
+        )
+        .on_conflict_do_nothing(index_elements=["id"])
+    )
+    await db.execute(user_upsert)
 
     # 3. Create initial submission record in PostgreSQL (PENDING)
     submission = Submission(

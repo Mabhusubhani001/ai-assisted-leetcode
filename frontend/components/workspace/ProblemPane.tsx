@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@clerk/nextjs";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { QuestionDetail, SubmissionResponse } from "@/types/problem";
@@ -31,6 +32,7 @@ export function ProblemPane({
   submissionTrigger = 0,
   onRestoreCode,
 }: ProblemPaneProps) {
+  const { getToken } = useAuth();
   const [activeTab, setActiveTab] = useState<"description" | "cases" | "submissions">("description");
   const [submissions, setSubmissions] = useState<SubmissionResponse[]>([]);
   const [isLoadingSubmissions, setIsLoadingSubmissions] = useState(false);
@@ -50,10 +52,13 @@ export function ProblemPane({
     setSubmissionError(null);
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+      const token = await getToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const res = await fetch(`${apiUrl}/api/v1/submissions/history/${problem.id}`, {
-        headers: {
-          Authorization: "Bearer dev_user_student42",
-        },
+        headers,
       });
       if (!res.ok) {
         throw new Error(`Server returned HTTP ${res.status}`);
@@ -65,7 +70,7 @@ export function ProblemPane({
     } finally {
       setIsLoadingSubmissions(false);
     }
-  }, [problem.id]);
+  }, [getToken, problem.id]);
 
   useEffect(() => {
     if (activeTab === "submissions" || submissionTrigger > 0) {

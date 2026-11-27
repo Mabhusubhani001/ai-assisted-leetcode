@@ -104,6 +104,7 @@ resource "aws_launch_template" "app" {
               echo "GEMINI_FALLBACK_MODEL=gemini-3.5-flash-lite" >> .env
               echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_dG9waWNhbC1wcmF3bi0xNjcuY2xlcmsuYWNjb3VudHMuZGV2JA" >> .env
               echo "CLERK_SECRET_KEY=sk_test_dwlTxbPJ0AVgZITMFoZJ459VIVvH5lK9qKZipPP0EU" >> .env
+              echo "CLERK_JWKS_URL=https://topical-prawn-167.clerk.accounts.dev/.well-known/jwks.json" >> .env
               echo "NEXT_PUBLIC_API_URL=" >> .env
 
               # 6. Build and launch production containers

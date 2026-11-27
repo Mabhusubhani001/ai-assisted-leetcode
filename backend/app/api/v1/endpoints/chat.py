@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 import redis.asyncio as aioredis
 
 from app.core.database import get_db, AsyncSessionLocal
@@ -39,17 +40,18 @@ async def persist_chat_log(
     Auto-provisions user row if missing (e.g. dev accounts or webhook race conditions).
     """
     async with AsyncSessionLocal() as session:
-        # Ensure user exists to satisfy foreign key constraint
-        user = await session.scalar(select(User).where(User.id == user_id))
-        if not user:
-            user = User(
+        # Ensure user exists to satisfy foreign key constraint atomically
+        user_upsert = (
+            pg_insert(User)
+            .values(
                 id=user_id,
                 email=f"{user_id}@example.com",
                 role="student",
                 is_active=True,
             )
-            session.add(user)
-            await session.flush()
+            .on_conflict_do_nothing(index_elements=["id"])
+        )
+        await session.execute(user_upsert)
 
         log = ChatLog(
             user_id=user_id,

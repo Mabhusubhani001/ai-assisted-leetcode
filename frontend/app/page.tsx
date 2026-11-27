@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useAuth, SignedIn, SignedOut, RedirectToSignIn } from "@clerk/nextjs";
 import { CheckCircle2, Clock, Circle, Trophy, ArrowRight, Sparkles } from "lucide-react";
 import { StudentCatalogSummary } from "@/types/problem";
 
@@ -44,15 +45,19 @@ const PROBLEMS: ProblemRow[] = [
 export default function HomePage() {
   const [summary, setSummary] = useState<StudentCatalogSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { getToken } = useAuth();
 
   useEffect(() => {
     async function fetchSummary() {
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+        const token = await getToken();
+        const headers: Record<string, string> = {};
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
         const res = await fetch(`${apiUrl}/api/v1/submissions/summary`, {
-          headers: {
-            Authorization: "Bearer dev_user_student42",
-          },
+          headers,
         });
         if (res.ok) {
           const data: StudentCatalogSummary = await res.json();
@@ -66,14 +71,16 @@ export default function HomePage() {
     }
 
     fetchSummary();
-  }, []);
+  }, [getToken]);
 
   const totalProblems = PROBLEMS.length;
   const totalSolved = summary?.total_solved ?? 0;
   const progressPct = Math.round((totalSolved / totalProblems) * 100);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-10 w-full flex-1 flex flex-col select-text">
+    <>
+      <SignedIn>
+        <div className="max-w-5xl mx-auto px-4 py-10 w-full flex-1 flex flex-col select-text">
       {/* Header Section */}
       <div className="mb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
@@ -215,5 +222,10 @@ export default function HomePage() {
         </div>
       </div>
     </div>
+  </SignedIn>
+  <SignedOut>
+    <RedirectToSignIn />
+  </SignedOut>
+</>
   );
 }

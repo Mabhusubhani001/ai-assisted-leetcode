@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { auth } from "@clerk/nextjs/server";
 import { PracticeWorkspace } from "@/components/workspace/PracticeWorkspace";
 import { QuestionDetail } from "@/types/problem";
 
@@ -136,6 +137,9 @@ async function getProblem(slug: string): Promise<QuestionDetail | null> {
 }
 
 export default async function ProblemPage({ params }: ProblemPageProps) {
+  // Pattern A: Enforce strict authentication gate
+  await auth.protect();
+
   const { slug } = await params;
   const problem = await getProblem(slug);
 

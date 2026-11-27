@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useAuth } from "@clerk/nextjs";
 import dynamic from "next/dynamic";
 import {
   Lock,
@@ -50,6 +51,7 @@ export function EditorPane({
   onLanguageChange,
   onSubmissionSuccess,
 }: EditorPaneProps) {
+  const { getToken } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submissionResult, setSubmissionResult] = useState<SubmissionResponse | null>(null);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
@@ -63,12 +65,16 @@ export function EditorPane({
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+      const token = await getToken();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const res = await fetch(`${apiUrl}/api/v1/submissions`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer dev_user_student42",
-        },
+        headers,
         body: JSON.stringify({
           question_id: questionId,
           language_id: language === "cpp" ? 54 : language === "java" ? 62 : language === "javascript" ? 63 : 71,
