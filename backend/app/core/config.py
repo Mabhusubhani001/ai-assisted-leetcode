@@ -23,11 +23,10 @@ class Settings(BaseSettings):
     # LLM Provider Configuration (Google Gemini)
     GEMINI_API_KEY: str = ""
     GEMINI_BASE_URL: str = "https://generativelanguage.googleapis.com/v1beta/openai/"
-    GEMINI_PRIMARY_MODEL: str = "gemini-3.8-flash"
+    GEMINI_PRIMARY_MODEL: str = "gemini-3.5-flash-lite"
     GEMINI_FALLBACK_MODELS: list[str] = [
-        "gemini-3.6-flash",
-        "gemini-3.5-flash-lite",
         "gemini-3.1-flash-lite",
+        "gemini-4-hydrogen",
     ]
 
     # Clerk Authentication & Webhook Sync

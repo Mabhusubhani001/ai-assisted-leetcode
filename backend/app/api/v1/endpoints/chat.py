@@ -17,7 +17,6 @@ from app.schemas.chat import (
     ChatEvaluationResponse,
     ChatResponse,
 )
-from app.services.ai_coach import AICoachService
 from app.services.llm_coach import LLMCoachService
 
 router = APIRouter(prefix="/chat", tags=["AI Coaching & Approach Validation"])

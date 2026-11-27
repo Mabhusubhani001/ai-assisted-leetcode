@@ -124,58 +124,24 @@ class LLMCoachService:
         """
         api_key = custom_api_key or settings.GEMINI_API_KEY or ""
 
-        # Graceful fallback if no Gemini API key is provided
+        # Graceful prompt if no Gemini API key is configured
         if not api_key:
-            from app.services.ai_coach import AICoachService
-
-            # Check injection strictly on current prompt (not past history)
-            if AICoachService.check_prompt_injection(current_prompt):
-                p_tok = len(current_prompt.split())
-                return LLMCoachingResult(
-                    is_approved=False,
-                    feedback="⚠️ **Security Alert:** Prompt injection attempt detected. You must explain your legitimate algorithmic approach and time/space complexity to unlock the editor.",
-                    missing_requirements=["Legitimate algorithmic explanation"],
-                    prompt_tokens=p_tok,
-                    completion_tokens=30,
-                    turn_tokens=p_tok,
-                    tokens_consumed=p_tok,
-                    provider_used="gemini",
-                    model_used="offline_fallback",
-                )
-
-            clean_history = [
-                m["content"] for m in conversation_history
-                if m.get("role") == "user" and not AICoachService.check_prompt_injection(m["content"])
-            ]
-            full_context = " ".join(clean_history + [current_prompt])
-
-            fallback = AICoachService.evaluate_approach(
-                question=question,
-                prompt=full_context,
-                language=language,
-            )
-            notice_header = (
-                "> **Google Gemini Setup Required:** Please enter your free Google Gemini API key by clicking **⚙️** in the top right to activate live AI coaching.\n\n"
-                "> You can generate a free key instantly at [Google AI Studio](https://aistudio.google.com).\n\n"
-            )
             return LLMCoachingResult(
-                is_approved=fallback.is_approved,
-                feedback=notice_header + fallback.feedback,
-                detected_data_structure=fallback.detected_data_structure,
-                detected_algorithm=fallback.detected_algorithm,
-                time_complexity=fallback.time_complexity,
-                space_complexity=fallback.space_complexity,
-                missing_requirements=fallback.missing_requirements,
-                starter_code=fallback.starter_code,
-                prompt_tokens=fallback.prompt_tokens,
-                completion_tokens=fallback.completion_tokens,
-                turn_tokens=fallback.prompt_tokens,
-                tokens_consumed=fallback.prompt_tokens,
+                is_approved=False,
+                feedback=(
+                    "> **Google Gemini Setup Required:** Please enter your Google Gemini API key by clicking **⚙️** in the top right to activate live AI coaching.\n\n"
+                    "> You can generate a free key instantly at [Google AI Studio](https://aistudio.google.com)."
+                ),
+                missing_requirements=["Active Google Gemini API connection"],
+                prompt_tokens=10,
+                completion_tokens=25,
+                turn_tokens=10,
+                tokens_consumed=10,
                 provider_used="gemini",
-                model_used="offline_fallback",
+                model_used="key_required",
             )
 
-        client = AsyncOpenAI(base_url=cls.BASE_URL, api_key=api_key, timeout=25.0)
+        client = AsyncOpenAI(base_url=cls.BASE_URL, api_key=api_key, timeout=75.0)
 
         system_prompt = (
             SYSTEM_PROMPT_TEMPLATE
@@ -247,9 +213,6 @@ class LLMCoachService:
                     starter_code = fence_match.group(1).strip()
 
             is_approved = bool(parsed.get("is_approved", False))
-            if is_approved and not starter_code:
-                # Fallback to database starter code if model omitted it
-                starter_code = question.starter_code.get(language) or question.starter_code.get("python")
 
             return LLMCoachingResult(
                 is_approved=is_approved,
@@ -290,31 +253,18 @@ class LLMCoachService:
                     model_used=model_used_tag,
                 )
 
-            # High-resilience fallback: Synthesize full conversation history via deterministic evaluator
-            from app.services.ai_coach import AICoachService
-            clean_history = [
-                m["content"] for m in conversation_history
-                if m.get("role") == "user" and not AICoachService.check_prompt_injection(m["content"])
-            ]
-            full_context = " ".join(clean_history + [current_prompt])
-            fallback = AICoachService.evaluate_approach(
-                question=question,
-                prompt=full_context,
-                language=language,
-            )
+            # Genuine AI failure reporting: notify student cleanly if all candidate models in waterfall were exhausted
             return LLMCoachingResult(
-                is_approved=fallback.is_approved,
-                feedback=fallback.feedback,
-                detected_data_structure=fallback.detected_data_structure,
-                detected_algorithm=fallback.detected_algorithm,
-                time_complexity=fallback.time_complexity,
-                space_complexity=fallback.space_complexity,
-                missing_requirements=fallback.missing_requirements,
-                starter_code=fallback.starter_code,
-                prompt_tokens=fallback.prompt_tokens,
-                completion_tokens=fallback.completion_tokens,
-                turn_tokens=fallback.prompt_tokens,
-                tokens_consumed=fallback.prompt_tokens,
+                is_approved=False,
+                feedback=(
+                    "⚠️ **AI Coach Notice:** The AI service is currently experiencing heavy load or latency. "
+                    "Please wait a few seconds and send your message again."
+                ),
+                missing_requirements=["AI Coach response pending retry"],
+                prompt_tokens=10,
+                completion_tokens=25,
+                turn_tokens=10,
+                tokens_consumed=10,
                 provider_used="gemini",
-                model_used="resilient_fallback",
+                model_used="service_error",
             )
