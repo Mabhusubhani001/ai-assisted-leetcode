@@ -100,8 +100,8 @@ resource "aws_launch_template" "app" {
               echo "QUESTION_TOKEN_LIMIT=2000" >> .env
               echo "GEMINI_API_KEY=" >> .env
               echo "GEMINI_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai/" >> .env
-              echo "GEMINI_PRIMARY_MODEL=gemini-3.8-flash" >> .env
-              echo "GEMINI_FALLBACK_MODEL=gemini-3.5-flash-lite" >> .env
+              echo "GEMINI_PRIMARY_MODEL=gemini-3.5-flash-lite" >> .env
+              echo "GEMINI_FALLBACK_MODEL=gemini-3.1-flash-lite" >> .env
               echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_dG9waWNhbC1wcmF3bi0xNjcuY2xlcmsuYWNjb3VudHMuZGV2JA" >> .env
               echo "CLERK_SECRET_KEY=sk_test_dwlTxbPJ0AVgZITMFoZJ459VIVvH5lK9qKZipPP0EU" >> .env
               echo "CLERK_JWKS_URL=https://topical-prawn-167.clerk.accounts.dev/.well-known/jwks.json" >> .env

@@ -74,6 +74,10 @@ desktop.ini
 tmp/
 temp/
 
+# Assessment Problem JSON Files (Keep private on laptop, only sample committed)
+problems/*.json
+!problems/sample_two_sum_ii.json
+
 # Terraform (Infrastructure State & Plugins)
 **/.terraform/*
 *.tfstate

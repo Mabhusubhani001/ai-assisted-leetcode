@@ -15,7 +15,7 @@ interface ProblemRow {
   acceptance: string;
 }
 
-const PROBLEMS: ProblemRow[] = [
+const FALLBACK_PROBLEMS: ProblemRow[] = [
   {
     id: "9ab21dc3-87d5-4961-8fdc-158c3dfd2260",
     title: "Two Sum",
@@ -43,14 +43,50 @@ const PROBLEMS: ProblemRow[] = [
 ];
 
 export default function HomePage() {
+  const [problems, setProblems] = useState<ProblemRow[]>(FALLBACK_PROBLEMS);
   const [summary, setSummary] = useState<StudentCatalogSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { getToken } = useAuth();
 
   useEffect(() => {
-    async function fetchSummary() {
+    async function fetchData() {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+
+      // 1. Fetch dynamic question catalog from database
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+        const qRes = await fetch(`${apiUrl}/api/v1/questions`);
+        if (qRes.ok) {
+          const qData = await qRes.json();
+          if (Array.isArray(qData) && qData.length > 0) {
+            const mapped: ProblemRow[] = qData.map((q: any) => {
+              const diffRaw = (q.difficulty || "Easy").toLowerCase();
+              const diff: "Easy" | "Medium" | "Hard" =
+                diffRaw === "medium" ? "Medium" : diffRaw === "hard" ? "Hard" : "Easy";
+
+              let category = "Algorithms";
+              const slug = q.slug || "";
+              if (slug.includes("sum") || slug.includes("array")) category = "Hash Table / Array";
+              else if (slug.includes("parenthes") || slug.includes("stack")) category = "Stack / String";
+              else if (slug.includes("list") || slug.includes("tree")) category = "Pointers / Linked List";
+
+              return {
+                id: q.id,
+                title: q.title,
+                slug: q.slug,
+                difficulty: diff,
+                category: q.category || category,
+                acceptance: q.acceptance || "50.0%",
+              };
+            });
+            setProblems(mapped);
+          }
+        }
+      } catch (err) {
+        console.warn("Could not fetch dynamic question catalog, using fallback:", err);
+      }
+
+      // 2. Fetch student submission summary
+      try {
         const token = await getToken();
         const headers: Record<string, string> = {};
         if (token) {
@@ -70,12 +106,12 @@ export default function HomePage() {
       }
     }
 
-    fetchSummary();
+    fetchData();
   }, [getToken]);
 
-  const totalProblems = PROBLEMS.length;
+  const totalProblems = problems.length;
   const totalSolved = summary?.total_solved ?? 0;
-  const progressPct = Math.round((totalSolved / totalProblems) * 100);
+  const progressPct = totalProblems > 0 ? Math.round((totalSolved / totalProblems) * 100) : 0;
 
   return (
     <Show when="signed-in" fallback={<RedirectToSignIn />}>
@@ -86,7 +122,7 @@ export default function HomePage() {
           <h1 className="text-xl font-bold tracking-tight text-white mb-1.5 text-balance flex items-center gap-2">
             <span>Assessment Problem Catalog</span>
             <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700">
-              3 Questions
+              {problems.length} Questions
             </span>
           </h1>
           <p className="text-xs text-zinc-400 max-w-2xl leading-relaxed">
@@ -150,7 +186,7 @@ export default function HomePage() {
         </div>
 
         <div className="divide-y divide-zinc-800/80 text-xs">
-          {PROBLEMS.map((problem, idx) => {
+          {problems.map((problem, idx) => {
             const progress = summary?.progress?.[problem.id];
             const isSolved = progress?.status === "SOLVED";
             const isAttempted = progress?.status === "ATTEMPTED";
@@ -205,7 +241,13 @@ export default function HomePage() {
 
                 {/* Difficulty Column */}
                 <div className="col-span-2">
-                  <span className="inline-block text-[11px] px-2 py-0.5 rounded font-mono font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
+                  <span className={`inline-block text-[11px] px-2 py-0.5 rounded font-mono font-medium border ${
+                    problem.difficulty === "Easy"
+                      ? "text-emerald-400 bg-emerald-500/10 border-emerald-500/20"
+                      : problem.difficulty === "Medium"
+                      ? "text-amber-400 bg-amber-500/10 border-amber-500/20"
+                      : "text-rose-400 bg-rose-500/10 border-rose-500/20"
+                  }`}>
                     {problem.difficulty}
                   </span>
                 </div>
