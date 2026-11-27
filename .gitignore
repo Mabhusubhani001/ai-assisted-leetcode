@@ -74,6 +74,13 @@ desktop.ini
 tmp/
 temp/
 
+# Terraform (Infrastructure State & Plugins)
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+
 .claude/
 .agents/
 skills-lock.json

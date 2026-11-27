@@ -1,0 +1,15 @@
+# ==============================================================================
+# Terraform Variables Example Template
+# Copy this file to terraform.tfvars (which is ignored by git) to customize:
+# cp terraform.tfvars.example terraform.tfvars
+# ==============================================================================
+
+aws_region   = "us-east-1"
+environment  = "production"
+
+# Master PostgreSQL Password (keep secret, never commit terraform.tfvars)
+db_password  = "ReplaceWithAStrongSecureMasterPassword123!"
+
+# Optional: Toggle dedicated isolated EC2 instance for Judge0 sandbox
+enable_judge0 = false
+instance_type = "t3.small"
