@@ -13,6 +13,7 @@ from app.models.test_case import TestCase
 
 SEED_QUESTIONS = [
     {
+        "id": "9ab21dc3-87d5-4961-8fdc-158c3dfd2260",
         "title": "Two Sum",
         "slug": "two-sum",
         "difficulty": "easy",
@@ -74,6 +75,7 @@ Output: [0,1]
         ]
     },
     {
+        "id": "8c12a860-2641-4770-b196-419b45e9944a",
         "title": "Valid Parentheses",
         "slug": "valid-parentheses",
         "difficulty": "easy",
@@ -133,6 +135,7 @@ Output: false
         ]
     },
     {
+        "id": "3df20336-3914-411a-ab93-4a180fec7aa4",
         "title": "Reverse Linked List",
         "slug": "reverse-linked-list",
         "difficulty": "easy",
@@ -196,8 +199,16 @@ async def seed_database():
     async with AsyncSessionLocal() as session:
         for q_data in SEED_QUESTIONS:
             slug = q_data["slug"]
+            target_id = uuid.UUID(q_data["id"])
             # Check if question exists
             existing_q = await session.scalar(select(Question).where(Question.slug == slug))
+
+            if existing_q and existing_q.id != target_id:
+                # Realign old randomly generated ID to canonical UUID
+                print(f"  • Realigning question '{slug}' from ID {existing_q.id} to {target_id}...")
+                await session.execute(delete(TestCase).where(TestCase.question_id == existing_q.id))
+                await session.execute(delete(Question).where(Question.id == existing_q.id))
+                existing_q = None
 
             if existing_q:
                 print(f"  • Question '{slug}' already exists (ID: {existing_q.id}). Updating test cases...")
@@ -206,6 +217,7 @@ async def seed_database():
                 await session.execute(delete(TestCase).where(TestCase.question_id == question_id))
             else:
                 new_q = Question(
+                    id=target_id,
                     title=q_data["title"],
                     slug=slug,
                     difficulty=q_data["difficulty"],

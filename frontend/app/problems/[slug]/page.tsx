@@ -120,18 +120,25 @@ Output: [5,4,3,2,1]
 };
 
 async function getProblem(slug: string): Promise<QuestionDetail | null> {
-  // Use 127.0.0.1 to prevent Windows IPv6 loopback hang and enforce 2-second timeout
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-  try {
-    const res = await fetch(`${apiUrl}/api/v1/questions/${slug}`, {
-      next: { revalidate: 60 },
-      signal: AbortSignal.timeout(2000),
-    });
-    if (res.ok) {
-      return await res.json();
+  const backendUrl = process.env.INTERNAL_API_URL || "http://backend:8000";
+  const candidates = [
+    backendUrl,
+    process.env.NEXT_PUBLIC_API_URL,
+    "http://127.0.0.1:8000",
+  ].filter(Boolean) as string[];
+
+  for (const baseUrl of candidates) {
+    try {
+      const res = await fetch(`${baseUrl}/api/v1/questions/${slug}`, {
+        next: { revalidate: 60 },
+        signal: AbortSignal.timeout(3000),
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {
+      // Continue to next candidate
     }
-  } catch {
-    // If backend is unreachable or timed out during SSR, seamlessly use fallback seeds
   }
   return FALLBACK_QUESTIONS[slug] || null;
 }
