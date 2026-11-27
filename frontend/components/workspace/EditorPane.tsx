@@ -188,7 +188,7 @@ export function EditorPane({
         <div className="border-t border-rose-900/60 bg-rose-950/40 p-3 text-xs text-rose-300 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
-            <span>Submission error: {submissionError}. Verify FastAPI backend is running.</span>
+            <span>Submission error: {submissionError}</span>
           </div>
           <button
             type="button"

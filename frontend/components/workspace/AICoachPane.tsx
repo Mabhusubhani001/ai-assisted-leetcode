@@ -16,6 +16,7 @@ import {
   X,
   Key,
   Sparkles,
+  RotateCcw,
 } from "lucide-react";
 import { ChatEvaluation } from "@/types/problem";
 
@@ -90,6 +91,42 @@ export function AICoachPane({
     setIsSettingsOpen(false);
   };
 
+  const [isResetting, setIsResetting] = useState(false);
+
+  const handleResetSession = async () => {
+    if (isResetting) return;
+    const confirmReset = window.confirm("Reset this coaching session and start over?");
+    if (!confirmReset) return;
+
+    setIsResetting(true);
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:8000";
+      const token = await getToken();
+      const headers: Record<string, string> = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      const res = await fetch(`${apiUrl}/api/v1/chat/reset/${questionId}`, {
+        method: "POST",
+        headers,
+      });
+      if (res.ok) {
+        onTokenUpdate(0);
+        setMessages([
+          {
+            id: `initial-msg-${Date.now()}`,
+            sender: "coach",
+            text: `Session reset. Explain your algorithmic strategy:\n\n1. What do you understand about the problem?\n2. What data structure will you use?\n3. What algorithm or pattern will you apply?\n4. What is your expected time and space complexity?\n\nI retain memory across our conversation. Once approved, I will generate your starter template in **${language.toUpperCase()}** with a **Push to Code Editor & Unlock** button.`,
+          },
+        ]);
+      }
+    } catch (err) {
+      console.error("Failed to reset session:", err);
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const textToSend = prompt.trim();
@@ -155,7 +192,7 @@ export function AICoachPane({
         {
           id: `err-${Date.now()}`,
           sender: "coach",
-          text: `⚠️ Communication error: ${err.message}. Verify that FastAPI backend is running on port 8000.`,
+          text: `⚠️ ${err.message}`,
         },
       ]);
     } finally {
@@ -187,11 +224,22 @@ export function AICoachPane({
             <span className="font-semibold text-zinc-100 tracking-tight shrink-0">AI Coach</span>
             <span className="inline-flex items-center gap-1.5 text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800/90 text-zinc-300 border border-zinc-700/70 whitespace-nowrap shrink-0">
               <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
-              <span>Gemini 3.8 Flash</span>
+              <span>Gemini 3.5 Flash</span>
             </span>
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
+            {/* Reset Session Trigger */}
+            <button
+              type="button"
+              onClick={handleResetSession}
+              disabled={isResetting}
+              title="Reset coaching session & tokens"
+              className="p-1 rounded text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-zinc-400 cursor-pointer disabled:opacity-50"
+            >
+              <RotateCcw className={`w-3.5 h-3.5 ${isResetting ? "animate-spin text-sky-400" : ""}`} />
+            </button>
+
             {/* BYOK Settings Trigger */}
             <button
               type="button"

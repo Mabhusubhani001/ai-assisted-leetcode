@@ -2,7 +2,7 @@ import uuid
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 import redis.asyncio as aioredis
 
@@ -175,3 +175,26 @@ async def get_chat_history(
     )
     result = await db.scalars(stmt)
     return list(result.all())
+
+@router.post("/reset/{question_id}")
+async def reset_chat_session(
+    question_id: uuid.UUID,
+    current_user: CurrentUser,
+    db: DbDep,
+    redis_client: RedisDep,
+):
+    """
+    Allows student to reset their coaching session for a problem.
+    Clears their Redis token counter and past chat logs for this question.
+    """
+    user_id = current_user.get("sub")
+    guardrail = TokenGuardrail(redis_client)
+    await guardrail.reset(user_id, question_id)
+
+    # Delete previous chat logs for this question so student has clean slate
+    await db.execute(
+        delete(ChatLog).where(ChatLog.user_id == user_id, ChatLog.question_id == question_id)
+    )
+    await db.commit()
+
+    return {"status": "reset", "tokens_used": 0}

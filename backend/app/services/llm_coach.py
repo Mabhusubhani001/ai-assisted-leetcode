@@ -238,6 +238,9 @@ class LLMCoachService:
             prompt_tokens = usage.prompt_tokens if usage else len(current_prompt.split()) * 2
             completion_tokens = usage.completion_tokens if usage else len(raw_text.split()) * 2
 
+            # Student input tokens for this turn (student is not charged for backend system prompt overhead)
+            student_tokens = max(len(current_prompt.split()) * 2, 10)
+
             # Determine starter code
             starter_code = parsed.get("starter_code")
             if starter_code:
@@ -258,8 +261,8 @@ class LLMCoachService:
                 starter_code=starter_code,
                 prompt_tokens=prompt_tokens,
                 completion_tokens=completion_tokens,
-                turn_tokens=prompt_tokens,  # 2000 budget applies to input tokens
-                tokens_consumed=prompt_tokens,
+                turn_tokens=student_tokens,
+                tokens_consumed=student_tokens,
                 provider_used="gemini",
                 model_used=model_used_tag,
             )

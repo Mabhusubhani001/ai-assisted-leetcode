@@ -66,9 +66,12 @@ class TokenGuardrail:
         """
         Atomically increments token consumption using Redis INCRBY.
         Guarantees zero race conditions under concurrent requests.
+        Sets 24-hour TTL (86400s) on key so user counters naturally expire daily.
         Returns: (new_total_tokens, is_locked)
         """
-        new_total = await self.redis.incrby(self._key(user_id, question_id), token_delta)
+        key = self._key(user_id, question_id)
+        new_total = await self.redis.incrby(key, token_delta)
+        await self.redis.expire(key, 86400)
         is_locked = new_total >= self.token_limit
         return new_total, is_locked
 
