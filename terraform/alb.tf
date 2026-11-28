@@ -99,7 +99,7 @@ resource "aws_lb_listener_rule" "api_routing" {
 
   condition {
     path_pattern {
-      values = ["/api/*", "/docs", "/openapi.json"]
+      values = ["/api/*", "/docs", "/openapi.json", "/.well-known/acme-challenge/*"]
     }
   }
 }

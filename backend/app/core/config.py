@@ -50,6 +50,7 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "http://dsa.msdevs.mooo.com",
+        "https://dsa.msdevs.mooo.com",
     ]
 
     model_config = SettingsConfigDict(
