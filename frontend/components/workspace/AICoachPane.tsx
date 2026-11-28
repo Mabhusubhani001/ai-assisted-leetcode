@@ -111,7 +111,10 @@ export function AICoachPane({
         headers,
       });
       if (res.ok) {
-        onTokenUpdate(0);
+        const resetData = await res.json().catch(() => ({}));
+        if (typeof resetData.tokens_used === "number") {
+          onTokenUpdate(resetData.tokens_used);
+        }
         setMessages([
           {
             id: `initial-msg-${Date.now()}`,

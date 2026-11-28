@@ -19,7 +19,7 @@ class SubmissionCreate(BaseModel):
     """Payload sent by student to execute/submit code."""
     question_id: uuid.UUID
     language_id: int = Field(description="Judge0 language ID (e.g. 71 for Python, 63 for JavaScript)")
-    source_code: str = Field(min_length=1, description="Student solution source code")
+    source_code: str = Field(min_length=1, max_length=65536, description="Student solution source code")
 
 class SubmissionResponse(BaseModel):
     """Submission result returned to client."""

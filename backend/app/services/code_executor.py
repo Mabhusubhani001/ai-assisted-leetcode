@@ -315,6 +315,23 @@ print(json.dumps(to_array(reversed_head)))
                     "Judge0 execution attempt failed (%s). Falling back to internal runner.", e
                 )
 
+        # CRITICAL SECURITY GUARDRAIL:
+        # In production and staging environments, executing untrusted student code directly on the
+        # host or API container via subprocess is strictly disabled to prevent remote code execution (RCE)
+        # and environment credential exfiltration.
+        if settings.ENVIRONMENT in ("production", "staging"):
+            logger.error(
+                "Execution aborted: Sandboxed executor (Judge0) is unavailable, and host fallback is forbidden in %s.",
+                settings.ENVIRONMENT,
+            )
+            return ExecutionResult(
+                status="RUNTIME_ERROR",
+                passed_test_cases=0,
+                total_test_cases=total_cases,
+                execution_time_sec=0.0,
+                stderr="Sandboxed code execution engine is currently unavailable in production. Please contact support.",
+            )
+
         slug = question.slug
         total_cases = len(test_cases)
         passed_count = 0

@@ -45,6 +45,14 @@ class Settings(BaseSettings):
     # Admin CLI & Portal Secret Key
     ADMIN_API_KEY: str = "dsa_admin_secret_key_change_in_prod"
 
+    # CORS Allowed Origins
+    ALLOWED_ORIGINS: list[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://production-dsa-alb-209746966.ap-southeast-2.elb.amazonaws.com",
+    ]
+
     model_config = SettingsConfigDict(
         env_file=(".env", "../.env"),
         extra="ignore"

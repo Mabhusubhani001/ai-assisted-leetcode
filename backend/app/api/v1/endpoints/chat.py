@@ -8,7 +8,7 @@ import redis.asyncio as aioredis
 
 from app.core.database import get_db, AsyncSessionLocal
 from app.core.redis import get_redis, TokenGuardrail
-from app.core.security import CurrentUser
+from app.core.security import CurrentUser, require_admin
 from app.models.question import Question
 from app.models.chat_log import ChatLog
 from app.models.user import User
@@ -185,11 +185,13 @@ async def reset_chat_session(
 ):
     """
     Allows student to reset their coaching session for a problem.
-    Clears their Redis token counter and past chat logs for this question.
+    Clears previous chat logs for this question to provide a clean conversational slate.
+    SECURITY GUARDRAIL: Consumed tokens are preserved in Redis to prevent students from
+    circumventing the 2,000-token guardrail budget by resetting sessions.
     """
     user_id = current_user.get("sub")
     guardrail = TokenGuardrail(redis_client)
-    await guardrail.reset(user_id, question_id)
+    usage = await guardrail.get_usage(user_id, question_id)
 
     # Delete previous chat logs for this question so student has clean slate
     await db.execute(
@@ -197,4 +199,29 @@ async def reset_chat_session(
     )
     await db.commit()
 
-    return {"status": "reset", "tokens_used": 0}
+    return {
+        "status": "reset",
+        "tokens_used": usage["tokens_used"],
+        "token_limit": usage["token_limit"],
+        "is_locked": usage["is_locked"],
+    }
+
+@router.post("/admin-reset/{user_id}/{question_id}")
+async def admin_reset_tokens(
+    user_id: str,
+    question_id: uuid.UUID,
+    admin: Annotated[dict, Depends(require_admin)],
+    redis_client: RedisDep,
+    db: DbDep,
+):
+    """
+    Administrative override to reset a student's token quota and conversation.
+    Strictly protected by dual-auth (require_admin).
+    """
+    guardrail = TokenGuardrail(redis_client)
+    await guardrail.reset(user_id, question_id)
+    await db.execute(
+        delete(ChatLog).where(ChatLog.user_id == user_id, ChatLog.question_id == question_id)
+    )
+    await db.commit()
+    return {"status": "admin_reset", "user_id": user_id, "tokens_used": 0}
