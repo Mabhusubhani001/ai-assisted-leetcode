@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Metadata } from "next";
 import { auth } from "@clerk/nextjs/server";
 import { PracticeWorkspace } from "@/components/workspace/PracticeWorkspace";
 import { QuestionDetail } from "@/types/problem";
@@ -7,6 +8,32 @@ interface ProblemPageProps {
   params: Promise<{
     slug: string;
   }>;
+}
+
+export async function generateMetadata({ params }: ProblemPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const problem = await getProblem(slug);
+
+  if (!problem) {
+    return {
+      title: "Problem Not Found",
+    };
+  }
+
+  return {
+    title: `${problem.title} (${problem.difficulty})`,
+    description: `Solve ${problem.title} on the AI-Assisted DSA Platform. Formulate your algorithmic approach with the AI Coach to unlock the code editor.`,
+    openGraph: {
+      title: `${problem.title} (${problem.difficulty}) | AI DSA Platform`,
+      description: `Practice ${problem.title} with guided AI mentorship and isolated test evaluation.`,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${problem.title} (${problem.difficulty})`,
+      description: `Practice ${problem.title} with guided AI mentorship.`,
+    },
+  };
 }
 
 // Fallback seed catalog for offline prerendering and fast development SSR

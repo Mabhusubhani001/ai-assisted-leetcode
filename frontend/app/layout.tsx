@@ -7,8 +7,28 @@ import { HeaderAuth } from "@/components/HeaderAuth";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "AI-Assisted DSA Assessment Platform",
-  description: "A disciplined algorithmic practice environment pairing real-time complexity analysis with sandboxed execution.",
+  title: {
+    default: "AI-Assisted DSA Assessment Platform",
+    template: "%s | AI DSA Platform",
+  },
+  description:
+    "A disciplined algorithmic practice environment pairing real-time complexity analysis with sandboxed execution.",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL ||
+      "http://production-dsa-alb-209746966.ap-southeast-2.elb.amazonaws.com"
+  ),
+  openGraph: {
+    title: "AI-Assisted DSA Assessment Platform",
+    description:
+      "Master algorithms with real-time AI coaching, token guardrails, and multi-language evaluation.",
+    siteName: "AI DSA Platform",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AI-Assisted DSA Assessment Platform",
+    description: "Master algorithms with real-time AI coaching.",
+  },
 };
 
 export default function RootLayout({
