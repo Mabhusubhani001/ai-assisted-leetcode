@@ -3,7 +3,7 @@ import { MetadataRoute } from "next";
 export default function robots(): MetadataRoute.Robots {
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL ||
-    "http://production-dsa-alb-209746966.ap-southeast-2.elb.amazonaws.com";
+    "http://dsa.msdevs.mooo.com";
 
   return {
     rules: [

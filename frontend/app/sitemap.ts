@@ -7,7 +7,7 @@ interface QuestionSummary {
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL ||
-    "http://production-dsa-alb-209746966.ap-southeast-2.elb.amazonaws.com";
+    "http://dsa.msdevs.mooo.com";
   const backendUrl = process.env.INTERNAL_API_URL || "http://backend:8000";
 
   let problems: QuestionSummary[] = [

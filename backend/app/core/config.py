@@ -51,6 +51,7 @@ class Settings(BaseSettings):
         "http://127.0.0.1:3000",
         "http://localhost:3001",
         "http://production-dsa-alb-209746966.ap-southeast-2.elb.amazonaws.com",
+        "http://dsa.msdevs.mooo.com",
     ]
 
     model_config = SettingsConfigDict(

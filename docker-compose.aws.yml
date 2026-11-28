@@ -45,6 +45,7 @@ services:
       PORT: 3000
       HOSTNAME: "0.0.0.0"
       INTERNAL_API_URL: "http://backend:8000"
+      NEXT_PUBLIC_APP_URL: "http://dsa.msdevs.mooo.com"
       NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_dG9waWNhbC1wcmF3bi0xNjcuY2xlcmsuYWNjb3VudHMuZGV2JA"
       CLERK_SECRET_KEY: "sk_test_dwlTxbPJ0AVgZITMFoZJ459VIVvH5lK9qKZipPP0EU"
     ports:
