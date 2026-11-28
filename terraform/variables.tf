@@ -103,5 +103,5 @@ variable "enable_judge0" {
 variable "judge0_instance_type" {
   description = "EC2 instance size for dedicated Judge0 sandbox"
   type        = string
-  default     = "t3.small"
+  default     = "t3.micro"
 }
