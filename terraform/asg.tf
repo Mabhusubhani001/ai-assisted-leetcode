@@ -202,10 +202,34 @@ resource "aws_instance" "judge0" {
   user_data = base64encode(<<-EOF
               #!/bin/bash
               set -ex
+
+              # 1. Allocate 2GB Swap space to ensure compilers (g++, javac) have memory buffer
+              dd if=/dev/zero of=/swapfile bs=128M count=16
+              chmod 600 /swapfile
+              mkswap /swapfile
+              swapon /swapfile
+              echo "/swapfile swap swap defaults 0 0" >> /etc/fstab
+
+              # 2. Update packages and install Docker + Git
               dnf update -y
               dnf install -y docker git
               systemctl enable docker
               systemctl start docker
+              usermod -a -G docker ec2-user
+
+              # 3. Install Docker Compose CLI plugin
+              mkdir -p /usr/local/lib/docker/cli-plugins
+              curl -SL https://github.com/docker/compose/releases/download/v2.24.5/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
+              chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+
+              # 4. Clone repo and deploy Judge0 stack
+              mkdir -p /home/ec2-user/judge0
+              cd /home/ec2-user/judge0
+              git clone https://github.com/Mabhusubhani001/ai-assisted-leetcode.git app
+              cd app/deploy/judge0
+
+              # 5. Launch Judge0 CE (Server, Worker, DB, Redis)
+              /usr/local/lib/docker/cli-plugins/docker-compose -f docker-compose.judge0.yml up -d
               EOF
   )
 
