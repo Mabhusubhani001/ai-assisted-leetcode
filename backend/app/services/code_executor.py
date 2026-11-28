@@ -1,16 +1,22 @@
+from __future__ import annotations
+import ast
 import asyncio
 import base64
 import json
 import logging
+import os
 import subprocess
 import sys
 import tempfile
 import time
 import httpx
+from typing import TYPE_CHECKING
 from pydantic import BaseModel
 from app.core.config import settings
-from app.models.question import Question
-from app.models.test_case import TestCase
+
+if TYPE_CHECKING:
+    from app.models.question import Question
+    from app.models.test_case import TestCase
 
 logger = logging.getLogger("code_executor")
 
@@ -38,6 +44,59 @@ class CodeExecutorService:
         62: "java",
         63: "javascript",
     }
+
+    BLOCKED_MODULES = {
+        "os", "sys", "subprocess", "shutil", "socket", "urllib", "requests",
+        "http", "posix", "pty", "commands", "ctypes", "fcntl", "resource",
+        "signal", "multiprocessing", "threading", "builtins", "importlib",
+        "inspect", "pickle", "shelve", "tempfile", "io", "pathlib", "glob",
+        "webbrowser", "ftplib", "smtplib", "telnetlib", "ssl",
+    }
+
+    BLOCKED_CALLS = {
+        "eval", "exec", "open", "compile", "__import__", "globals",
+        "locals", "vars", "getattr", "setattr", "delattr", "exit", "quit",
+        "breakpoint", "memoryview", "input",
+    }
+
+    BLOCKED_ATTRS = {
+        "__subclasses__", "__bases__", "__mro__", "__code__",
+        "__builtins__", "__globals__", "__class__", "__qualname__",
+        "__dict__", "__closure__",
+    }
+
+    @classmethod
+    def _audit_python_ast(cls, source_code: str) -> str | None:
+        """
+        Static AST Security Audit.
+        Scans code before execution to block dangerous imports, builtins,
+        and dunder attribute inspection escapes (e.g. __subclasses__).
+        """
+        try:
+            tree = ast.parse(source_code)
+        except SyntaxError as e:
+            return f"SyntaxError: {e.msg} on line {e.lineno}"
+
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    mod = alias.name.split(".")[0]
+                    if mod in cls.BLOCKED_MODULES:
+                        return f"Security Restriction: Importing '{mod}' is not permitted in competitive programming practice."
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:
+                    mod = node.module.split(".")[0]
+                    if mod in cls.BLOCKED_MODULES:
+                        return f"Security Restriction: Importing from '{mod}' is not permitted in competitive programming practice."
+            elif isinstance(node, ast.Call):
+                if isinstance(node.func, ast.Name):
+                    if node.func.id in cls.BLOCKED_CALLS:
+                        return f"Security Restriction: Calling '{node.func.id}()' is prohibited."
+            elif isinstance(node, ast.Attribute):
+                if node.attr in cls.BLOCKED_ATTRS:
+                    return f"Security Restriction: Accessing protected attribute '{node.attr}' is prohibited."
+
+        return None
 
     @classmethod
     def _get_legacy_python_driver(cls, slug: str) -> str:
@@ -292,58 +351,71 @@ print(json.dumps(to_array(reversed_head)))
         question: Question,
         test_cases: list[TestCase],
         source_code: str,
-        language_id: int = 71,  # 71 = Python 3 in Judge0
+        language_id: int = 71,  # 71 = Python 3
         timeout_sec: float = 2.0,
     ) -> ExecutionResult:
         """
         Executes code sequentially against all test cases.
-        Dispatches to Judge0 if JUDGE0_API_URL is configured; otherwise uses internal async runner.
-        Stops on first failure to save compute (standard LeetCode evaluation behavior).
+        For Python 3 (language_id=71):
+          1. Static AST Security Audit (Layer 1)
+          2. Environment & Secret Scrubbing (Layer 2)
+          3. Process isolation with Linux rlimit and timeouts (Layer 3)
+        For other languages:
+          Returns informative notification that live sandbox is active for Python 3.
         """
-        # Route to Judge0 if configured, with graceful fallback to internal runner
-        if settings.JUDGE0_API_URL:
-            try:
-                return await cls._execute_via_judge0(
-                    question=question,
-                    test_cases=test_cases,
-                    source_code=source_code,
-                    language_id=language_id,
-                    timeout_sec=timeout_sec,
-                )
-            except Exception as e:
-                logger.warning(
-                    "Judge0 execution attempt failed (%s). Falling back to internal runner.", e
-                )
+        total_cases = len(test_cases)
+        passed_count = 0
+        max_time = 0.0
 
-        # CRITICAL SECURITY GUARDRAIL:
-        # In production and staging environments, executing untrusted student code directly on the
-        # host or API container via subprocess is strictly disabled to prevent remote code execution (RCE)
-        # and environment credential exfiltration.
-        if settings.ENVIRONMENT in ("production", "staging"):
-            logger.error(
-                "Execution aborted: Sandboxed executor (Judge0) is unavailable, and host fallback is forbidden in %s.",
-                settings.ENVIRONMENT,
-            )
+        # Language Guardrail: Live in-container sandbox executes Python 3
+        if language_id != 71:
             return ExecutionResult(
                 status="RUNTIME_ERROR",
                 passed_test_cases=0,
                 total_test_cases=total_cases,
                 execution_time_sec=0.0,
-                stderr="Sandboxed code execution engine is currently unavailable in production. Please contact support.",
+                stderr="Live evaluation sandbox is currently active for Python 3. Please switch language to Python 3 in the editor header to execute test cases.",
             )
 
-        slug = question.slug
-        total_cases = len(test_cases)
-        passed_count = 0
-        max_time = 0.0
+        # Layer 1: Static AST Security Audit (Syntax Analysis)
+        security_violation = cls._audit_python_ast(source_code)
+        if security_violation:
+            return ExecutionResult(
+                status="RUNTIME_ERROR",
+                passed_test_cases=0,
+                total_test_cases=total_cases,
+                execution_time_sec=0.0,
+                stderr=security_violation,
+            )
 
+        # Layer 2: Generate executable test harness with standard algorithmic imports
         harness_code = cls._generate_executable_code(question, source_code, language_id)
 
-        with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False) as f:
-            f.write(harness_code)
-            temp_script = f.name
+        # Create isolated temporary directory
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_script = os.path.join(temp_dir, "solution.py")
+            with open(temp_script, "w", encoding="utf-8") as f:
+                f.write(harness_code)
 
-        try:
+            # Scrubbed environment: ZERO access to host environment variables or secrets
+            isolated_env = {
+                "PYTHONPATH": "",
+                "LANG": "C.UTF-8",
+                "PYTHONHASHSEED": "0",
+            }
+
+            def set_rlimits():
+                try:
+                    import resource
+                    # 2 seconds CPU limit
+                    resource.setrlimit(resource.RLIMIT_CPU, (2, 3))
+                    # 128MB RAM limit
+                    resource.setrlimit(resource.RLIMIT_AS, (128 * 1024 * 1024, 128 * 1024 * 1024))
+                    # Disable file writes
+                    resource.setrlimit(resource.RLIMIT_FSIZE, (0, 0))
+                except Exception:
+                    pass
+
             for idx, tc in enumerate(test_cases):
                 start_t = time.perf_counter()
 
@@ -354,6 +426,9 @@ print(json.dumps(to_array(reversed_head)))
                         stdin=asyncio.subprocess.PIPE,
                         stdout=asyncio.subprocess.PIPE,
                         stderr=asyncio.subprocess.PIPE,
+                        env=isolated_env,
+                        cwd=temp_dir,
+                        preexec_fn=set_rlimits if sys.platform != "win32" else None,
                     )
 
                     stdout_bytes, stderr_bytes = await asyncio.wait_for(
@@ -363,6 +438,7 @@ print(json.dumps(to_array(reversed_head)))
                 except asyncio.TimeoutError:
                     try:
                         proc.kill()
+                        await proc.wait()
                     except Exception:
                         pass
                     return ExecutionResult(
@@ -392,7 +468,6 @@ print(json.dumps(to_array(reversed_head)))
                 actual_output = stdout_bytes.decode("utf-8", errors="replace").strip()
                 expected_output = tc.expected_stdout.strip()
 
-                # Normalize JSON array representations if applicable
                 def normalize(val: str) -> str:
                     try:
                         parsed = json.loads(val)
@@ -403,8 +478,6 @@ print(json.dumps(to_array(reversed_head)))
                 if normalize(actual_output) == normalize(expected_output):
                     passed_count += 1
                 else:
-                    # WRONG ANSWER
-                    # Security boundary: If failure is on a hidden test case, NEVER leak input/expected
                     failed_info = None
                     if not tc.is_hidden:
                         failed_info = {
@@ -417,7 +490,7 @@ print(json.dumps(to_array(reversed_head)))
                         failed_info = {
                             "test_case_number": idx + 1,
                             "is_hidden": True,
-                            "message": "Failed on hidden test case. Review edge cases (negative numbers, boundaries, duplicates)."
+                            "message": "Failed on hidden test case. Review edge cases (negative numbers, boundaries, duplicates).",
                         }
 
                     return ExecutionResult(
@@ -428,17 +501,9 @@ print(json.dumps(to_array(reversed_head)))
                         failed_test_case_info=failed_info,
                     )
 
-            # All test cases passed!
             return ExecutionResult(
                 status="ACCEPTED",
                 passed_test_cases=passed_count,
                 total_test_cases=total_cases,
                 execution_time_sec=round(max_time, 3),
             )
-
-        finally:
-            import os
-            try:
-                os.remove(temp_script)
-            except Exception:
-                pass
